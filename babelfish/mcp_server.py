@@ -5,12 +5,7 @@ import asyncio
 import sys
 from mcp.server.models import InitializationOptions
 from mcp.server import NotificationOptions, Server
-from mcp.types import (
-    CallToolRequest,
-    ListToolsRequest, 
-    TextContent,
-    Tool
-)
+from mcp.types import CallToolRequest, ListToolsRequest, TextContent, Tool
 from .chess_analyzer import ChessAnalyzer
 
 
@@ -32,16 +27,16 @@ def create_server():
                     "properties": {
                         "fen": {
                             "type": "string",
-                            "description": "The chess position in FEN notation"
+                            "description": "The chess position in FEN notation",
                         },
                         "depth": {
                             "type": "integer",
                             "description": "Analysis depth (default: 15)",
-                            "default": 15
-                        }
+                            "default": 15,
+                        },
                     },
-                    "required": ["fen"]
-                }
+                    "required": ["fen"],
+                },
             ),
             Tool(
                 name="analyze_game",
@@ -52,11 +47,11 @@ def create_server():
                         "moves": {
                             "type": "array",
                             "items": {"type": "string"},
-                            "description": "List of moves in standard algebraic notation"
+                            "description": "List of moves in standard algebraic notation",
                         }
                     },
-                    "required": ["moves"]
-                }
+                    "required": ["moves"],
+                },
             ),
             Tool(
                 name="explain_position",
@@ -66,12 +61,12 @@ def create_server():
                     "properties": {
                         "fen": {
                             "type": "string",
-                            "description": "The chess position in FEN notation"
+                            "description": "The chess position in FEN notation",
                         }
                     },
-                    "required": ["fen"]
-                }
-            )
+                    "required": ["fen"],
+                },
+            ),
         ]
 
     @server.call_tool()
@@ -82,50 +77,51 @@ def create_server():
             if name == "analyze_position":
                 fen = arguments.get("fen")
                 depth = arguments.get("depth", 15)
-                
+
                 if not fen:
-                    return [TextContent(type="text", text="Error: FEN position is required")]
-                    
+                    return [
+                        TextContent(type="text", text="Error: FEN position is required")
+                    ]
+
                 analysis = analyzer.analyze_position(fen, depth)
                 explanation = analyzer.get_position_explanation(fen)
-                
-                result = {
-                    "analysis": analysis,
-                    "explanation": explanation
-                }
-                
+
+                result = {"analysis": analysis, "explanation": explanation}
+
                 return [TextContent(type="text", text=json.dumps(result, indent=2))]
-                
+
             elif name == "analyze_game":
                 moves = arguments.get("moves", [])
-                
+
                 if not moves:
-                    return [TextContent(type="text", text="Error: Moves list is required")]
-                    
+                    return [
+                        TextContent(type="text", text="Error: Moves list is required")
+                    ]
+
                 analyses = analyzer.analyze_game(moves)
-                
-                summary = {
-                    "total_moves": len(moves),
-                    "game_analysis": analyses
-                }
-                
+
+                summary = {"total_moves": len(moves), "game_analysis": analyses}
+
                 return [TextContent(type="text", text=json.dumps(summary, indent=2))]
-                
+
             elif name == "explain_position":
                 fen = arguments.get("fen")
-                
+
                 if not fen:
-                    return [TextContent(type="text", text="Error: FEN position is required")]
-                    
+                    return [
+                        TextContent(type="text", text="Error: FEN position is required")
+                    ]
+
                 explanation = analyzer.get_position_explanation(fen)
-                
+
                 return [TextContent(type="text", text=explanation)]
             else:
                 return [TextContent(type="text", text=f"Unknown tool: {name}")]
-                
+
         except Exception as e:
             print(f"❌ Tool error: {e}", file=sys.stderr)
             import traceback
+
             traceback.print_exc(file=sys.stderr)
             return [TextContent(type="text", text=f"Error: {str(e)}")]
 
@@ -137,10 +133,10 @@ async def run_server():
     try:
         print("🔧 Creating MCP server...", file=sys.stderr)
         server = create_server()
-        
+
         print("🔧 Initializing stdio transport...", file=sys.stderr)
         from mcp.server.stdio import stdio_server
-        
+
         async with stdio_server() as (read_stream, write_stream):
             print("🔧 Starting server...", file=sys.stderr)
             await server.run(
@@ -158,5 +154,6 @@ async def run_server():
     except Exception as e:
         print(f"❌ run_server error: {e}", file=sys.stderr)
         import traceback
+
         traceback.print_exc(file=sys.stderr)
         raise

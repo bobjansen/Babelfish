@@ -49,6 +49,7 @@ async def run_mcp_server():
     except Exception as e:
         print(f"❌ MCP Server error: {e}", file=sys.stderr)
         import traceback
+
         traceback.print_exc(file=sys.stderr)
         raise
 

@@ -3,64 +3,109 @@
 from stockfish import Stockfish
 from typing import Dict, List, Optional
 import json
+import chess
+import chess.pgn
 
 
 class ChessAnalyzer:
     """Chess analyzer that provides context-rich analysis using Stockfish."""
-    
+
     def __init__(self, stockfish_path: Optional[str] = None):
         """Initialize the chess analyzer.
-        
+
         Args:
             stockfish_path: Path to stockfish binary. If None, uses system stockfish.
         """
-        self.stockfish = Stockfish(path=stockfish_path) if stockfish_path else Stockfish()
-        
+        self.stockfish = (
+            Stockfish(path=stockfish_path) if stockfish_path else Stockfish()
+        )
+
+    def uci_to_san(self, fen: str, uci_move: str) -> str:
+        """Convert UCI move to Standard Algebraic Notation.
+
+        Args:
+            fen: The position in FEN notation
+            uci_move: Move in UCI format (e.g., "b4d2")
+
+        Returns:
+            Move in Standard Algebraic Notation (e.g., "Bd2")
+        """
+        try:
+            board = chess.Board(fen)
+            move = chess.Move.from_uci(uci_move)
+            if move in board.legal_moves:
+                return board.san(move)
+            else:
+                return uci_move  # Return UCI if conversion fails
+        except:
+            return uci_move  # Return UCI if conversion fails
+
     def analyze_position(self, fen: str, depth: int = 15) -> Dict:
         """Analyze a chess position given in FEN notation.
-        
+
         Args:
             fen: The position in FEN notation
             depth: Analysis depth (default 15)
-            
+
         Returns:
             Dictionary containing position analysis
         """
         if not self.stockfish.is_fen_valid(fen):
             raise ValueError(f"Invalid FEN: {fen}")
-            
+
         self.stockfish.set_fen_position(fen)
         self.stockfish.set_depth(depth)
-        
+
         evaluation = self.stockfish.get_evaluation()
-        best_move = self.stockfish.get_best_move()
+        best_move_uci = self.stockfish.get_best_move()
         top_moves = self.stockfish.get_top_moves(3)
-        
+
+        # Convert UCI moves to Standard Algebraic Notation
+        best_move = self.uci_to_san(fen, best_move_uci) if best_move_uci else None
+
+        # Convert top moves to SAN
+        top_moves_san = []
+        for move_info in top_moves:
+            uci_move = move_info.get("Move")
+            if uci_move:
+                san_move = self.uci_to_san(fen, uci_move)
+                move_info_san = move_info.copy()
+                move_info_san["Move"] = san_move
+                move_info_san["UCI"] = uci_move  # Keep UCI for reference
+                top_moves_san.append(move_info_san)
+            else:
+                top_moves_san.append(move_info)
+
         return {
             "fen": fen,
             "evaluation": evaluation,
             "best_move": best_move,
-            "top_moves": top_moves,
-            "is_check": self.stockfish.will_move_be_a_capture(best_move) if best_move else False
+            "best_move_uci": best_move_uci,
+            "top_moves": top_moves_san,
+            "is_check": (
+                self.stockfish.will_move_be_a_capture(best_move_uci)
+                if best_move_uci
+                else False
+            ),
         }
-        
+
     def analyze_game(self, moves: List[str]) -> List[Dict]:
         """Analyze a complete game given as a list of moves.
-        
+
         Args:
             moves: List of moves in standard algebraic notation
-            
+
         Returns:
             List of analysis for each position
         """
         analyses = []
         self.stockfish.set_position(moves)
-        
+
         # Analyze each position in the game
         for i in range(len(moves)):
-            self.stockfish.set_position(moves[:i+1])
+            self.stockfish.set_position(moves[: i + 1])
             fen = self.stockfish.get_fen_position()
-            
+
             try:
                 analysis = self.analyze_position(fen)
                 analysis["move_number"] = i + 1
@@ -68,22 +113,22 @@ class ChessAnalyzer:
                 analyses.append(analysis)
             except Exception as e:
                 print(f"Error analyzing position after move {i+1}: {e}")
-                
+
         return analyses
-        
+
     def get_position_explanation(self, fen: str) -> str:
         """Get a human-readable explanation of the position.
-        
+
         Args:
             fen: The position in FEN notation
-            
+
         Returns:
             Human-readable position description
         """
         analysis = self.analyze_position(fen)
-        
+
         explanation_parts = []
-        
+
         # Evaluation explanation
         eval_info = analysis["evaluation"]
         if eval_info["type"] == "cp":
@@ -91,18 +136,30 @@ class ChessAnalyzer:
             if abs(centipawns) < 50:
                 explanation_parts.append("The position is roughly equal.")
             elif centipawns > 0:
-                advantage = "slight" if centipawns < 100 else "significant" if centipawns < 300 else "decisive"
-                explanation_parts.append(f"White has a {advantage} advantage ({centipawns/100:.1f} pawns).")
+                advantage = (
+                    "slight"
+                    if centipawns < 100
+                    else "significant" if centipawns < 300 else "decisive"
+                )
+                explanation_parts.append(
+                    f"White has a {advantage} advantage ({centipawns/100:.1f} pawns)."
+                )
             else:
-                advantage = "slight" if centipawns > -100 else "significant" if centipawns > -300 else "decisive"
-                explanation_parts.append(f"Black has a {advantage} advantage ({abs(centipawns)/100:.1f} pawns).")
+                advantage = (
+                    "slight"
+                    if centipawns > -100
+                    else "significant" if centipawns > -300 else "decisive"
+                )
+                explanation_parts.append(
+                    f"Black has a {advantage} advantage ({abs(centipawns)/100:.1f} pawns)."
+                )
         elif eval_info["type"] == "mate":
             moves_to_mate = eval_info["value"]
             side = "White" if moves_to_mate > 0 else "Black"
             explanation_parts.append(f"{side} has mate in {abs(moves_to_mate)} moves.")
-        
+
         # Best move suggestion
         if analysis["best_move"]:
             explanation_parts.append(f"The best move is {analysis['best_move']}.")
-            
+
         return " ".join(explanation_parts)
