@@ -3,6 +3,7 @@
 import json
 import asyncio
 import sys
+import traceback
 from mcp.server.models import InitializationOptions
 from mcp.server import NotificationOptions, Server
 from mcp.types import CallToolRequest, ListToolsRequest, TextContent, Tool
@@ -153,7 +154,6 @@ async def run_server():
             )
     except Exception as e:
         print(f"❌ run_server error: {e}", file=sys.stderr)
-        import traceback
 
         traceback.print_exc(file=sys.stderr)
         raise
