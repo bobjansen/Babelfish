@@ -1,0 +1,13 @@
+[project]
+name = "babelfish"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "mcpnp",
+    "stockfish>=3.28.0",
+]
+
+[tool.uv.sources]
+mcpnp = { git = "https://github.com/bobjansen/mcpnp.git" }
