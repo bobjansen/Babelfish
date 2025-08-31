@@ -1,4 +1,4 @@
-# Babelfish 🐟
+# Babelfish 🐟
 
 **"Speak to your chess engine"**
 
@@ -6,11 +6,11 @@ Babelfish is a chess analysis tool that uses Stockfish via MCP (Model Context Pr
 
 ## Features
 
-- =� **Position Analysis** - Deep analysis of chess positions using Stockfish
-- <� **Move Suggestions** - Get the best moves with explanations
-- =� **Game Analysis** - Analyze complete games move by move
-- =� **Human-Readable Explanations** - Convert engine output into natural language
-- = **MCP Integration** - Works seamlessly with Claude Desktop and other MCP clients
+- 📊 **Position Analysis** - Deep analysis of chess positions using Stockfish
+- 🎯 **Move Suggestions** - Get the best moves with explanations
+- 📚 **Game Analysis** - Analyze complete games move by move
+- 🗣️ **Human-Readable Explanations** - Convert engine output into natural language
+- 🔌 **MCP Integration** - Works seamlessly with Claude Desktop and other MCP clients
 
 ## Installation
 
