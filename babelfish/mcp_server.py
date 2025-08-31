@@ -1,86 +1,28 @@
 """MCP server for Babelfish chess analysis."""
 
 import json
-from typing import Dict, Any, List
-from mcp.server import Server
-from mcp.types import TextContent, Tool, CallToolRequest
+import asyncio
+import sys
+from mcp.server.models import InitializationOptions
+from mcp.server import NotificationOptions, Server
+from mcp.types import (
+    CallToolRequest,
+    ListToolsRequest, 
+    TextContent,
+    Tool
+)
 from .chess_analyzer import ChessAnalyzer
 
 
-class BabelfishMCPServer:
-    """MCP Server that exposes chess analysis tools."""
-    
-    def __init__(self):
-        self.server = Server("babelfish")
-        self.analyzer = ChessAnalyzer()
-        self.setup_tools()
-        
-    def setup_tools(self):
-        """Setup the MCP tools for chess analysis."""
-        
-        @self.server.call_tool()
-        async def analyze_position(arguments: Dict[str, Any]) -> List[TextContent]:
-            """Analyze a chess position given in FEN notation."""
-            try:
-                fen = arguments.get("fen")
-                depth = arguments.get("depth", 15)
-                
-                if not fen:
-                    return [TextContent(type="text", text="Error: FEN position is required")]
-                    
-                analysis = self.analyzer.analyze_position(fen, depth)
-                explanation = self.analyzer.get_position_explanation(fen)
-                
-                result = {
-                    "analysis": analysis,
-                    "explanation": explanation
-                }
-                
-                return [TextContent(type="text", text=json.dumps(result, indent=2))]
-                
-            except Exception as e:
-                return [TextContent(type="text", text=f"Error analyzing position: {str(e)}")]
-        
-        @self.server.call_tool()
-        async def analyze_game(arguments: Dict[str, Any]) -> List[TextContent]:
-            """Analyze a complete chess game."""
-            try:
-                moves = arguments.get("moves", [])
-                
-                if not moves:
-                    return [TextContent(type="text", text="Error: Moves list is required")]
-                    
-                analyses = self.analyzer.analyze_game(moves)
-                
-                # Create summary
-                summary = {
-                    "total_moves": len(moves),
-                    "game_analysis": analyses
-                }
-                
-                return [TextContent(type="text", text=json.dumps(summary, indent=2))]
-                
-            except Exception as e:
-                return [TextContent(type="text", text=f"Error analyzing game: {str(e)}")]
-        
-        @self.server.call_tool()
-        async def explain_position(arguments: Dict[str, Any]) -> List[TextContent]:
-            """Get a human-readable explanation of a chess position."""
-            try:
-                fen = arguments.get("fen")
-                
-                if not fen:
-                    return [TextContent(type="text", text="Error: FEN position is required")]
-                    
-                explanation = self.analyzer.get_position_explanation(fen)
-                
-                return [TextContent(type="text", text=explanation)]
-                
-            except Exception as e:
-                return [TextContent(type="text", text=f"Error explaining position: {str(e)}")]
-    
-    def get_tools(self) -> List[Tool]:
-        """Get the list of available tools."""
+def create_server():
+    """Create and configure the MCP server."""
+    server = Server("babelfish")
+    analyzer = ChessAnalyzer()
+
+    @server.list_tools()
+    async def handle_list_tools() -> list[Tool]:
+        """List available tools."""
+        print("📋 Listing available tools...", file=sys.stderr)
         return [
             Tool(
                 name="analyze_position",
@@ -131,12 +73,90 @@ class BabelfishMCPServer:
                 }
             )
         ]
-    
-    async def run(self):
-        """Run the MCP server."""
-        # Register tools with the server
-        for tool in self.get_tools():
-            self.server.list_tools.append(tool)
-            
-        # Run the server
-        return self.server
+
+    @server.call_tool()
+    async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
+        """Handle tool calls."""
+        print(f"🔧 Tool called: {name} with args: {arguments}", file=sys.stderr)
+        try:
+            if name == "analyze_position":
+                fen = arguments.get("fen")
+                depth = arguments.get("depth", 15)
+                
+                if not fen:
+                    return [TextContent(type="text", text="Error: FEN position is required")]
+                    
+                analysis = analyzer.analyze_position(fen, depth)
+                explanation = analyzer.get_position_explanation(fen)
+                
+                result = {
+                    "analysis": analysis,
+                    "explanation": explanation
+                }
+                
+                return [TextContent(type="text", text=json.dumps(result, indent=2))]
+                
+            elif name == "analyze_game":
+                moves = arguments.get("moves", [])
+                
+                if not moves:
+                    return [TextContent(type="text", text="Error: Moves list is required")]
+                    
+                analyses = analyzer.analyze_game(moves)
+                
+                summary = {
+                    "total_moves": len(moves),
+                    "game_analysis": analyses
+                }
+                
+                return [TextContent(type="text", text=json.dumps(summary, indent=2))]
+                
+            elif name == "explain_position":
+                fen = arguments.get("fen")
+                
+                if not fen:
+                    return [TextContent(type="text", text="Error: FEN position is required")]
+                    
+                explanation = analyzer.get_position_explanation(fen)
+                
+                return [TextContent(type="text", text=explanation)]
+            else:
+                return [TextContent(type="text", text=f"Unknown tool: {name}")]
+                
+        except Exception as e:
+            print(f"❌ Tool error: {e}", file=sys.stderr)
+            import traceback
+            traceback.print_exc(file=sys.stderr)
+            return [TextContent(type="text", text=f"Error: {str(e)}")]
+
+    return server
+
+
+async def run_server():
+    """Run the MCP server."""
+    try:
+        print("🔧 Creating MCP server...", file=sys.stderr)
+        server = create_server()
+        
+        print("🔧 Initializing stdio transport...", file=sys.stderr)
+        from mcp.server.stdio import stdio_server
+        
+        async with stdio_server() as (read_stream, write_stream):
+            print("🔧 Starting server...", file=sys.stderr)
+            await server.run(
+                read_stream,
+                write_stream,
+                InitializationOptions(
+                    server_name="babelfish",
+                    server_version="0.1.0",
+                    capabilities=server.get_capabilities(
+                        notification_options=NotificationOptions(),
+                        experimental_capabilities={},
+                    ),
+                ),
+            )
+    except Exception as e:
+        print(f"❌ run_server error: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc(file=sys.stderr)
+        raise
