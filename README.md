@@ -1,4 +1,4 @@
-# Babelfish =
+# Babelfish 🐟
 
 **"Speak to your chess engine"**
 
@@ -90,7 +90,7 @@ To run Babelfish in WSL while using Claude Desktop on Windows:
   "mcpServers": {
     "babelfish": {
       "command": "wsl",
-      "args": ["-d", "Ubuntu", "bash", "-c", "cd /home/brj/babelfish && uv run python main.py --mcp"],
+      "args": ["-d", "Ubuntu", "bash", "-c", "cd ~/babelfish && uv run python main.py --mcp"],
       "cwd": "C:\\"
     }
   }
@@ -99,7 +99,7 @@ To run Babelfish in WSL while using Claude Desktop on Windows:
 
 **Important Notes for WSL Setup:**
 - Replace `Ubuntu` with your WSL distribution name if different (check with `wsl -l` in Windows PowerShell)
-- Replace `/home/brj/babelfish` with the actual path to your babelfish directory in WSL
+- Replace `~/babelfish` with the actual path to your babelfish directory in WSL
 - Make sure WSL is set up and your distribution is running
 - Ensure `uv` and all dependencies are installed in the WSL environment, not Windows
 
@@ -109,7 +109,7 @@ To run Babelfish in WSL while using Claude Desktop on Windows:
   "mcpServers": {
     "babelfish": {
       "command": "wsl.exe",
-      "args": ["--distribution", "Ubuntu-22.04", "--exec", "bash", "-c", "cd /home/brj/babelfish && uv run python main.py --mcp"]
+      "args": ["--distribution", "Ubuntu-22.04", "--exec", "bash", "-c", "cd ~/babelfish && uv run python main.py --mcp"]
     }
   }
 }
@@ -150,7 +150,7 @@ Analyzes a chess position using the Stockfish engine.
 - `fen` (required): Chess position in FEN notation
 - `depth` (optional): Analysis depth (default: 15)
 
-### `analyze_game` 
+### `analyze_game`
 Analyzes a complete chess game move by move.
 
 **Parameters:**
@@ -196,13 +196,13 @@ wsl -l -v
 wsl -d Ubuntu
 
 # Test the command from Windows PowerShell
-wsl -d Ubuntu bash -c "cd /home/brj/babelfish && uv run python main.py --mcp"
+wsl -d Ubuntu bash -c "cd ~/babelfish && uv run python main.py --mcp"
 ```
 
 #### Path and Permission Issues
 ```bash
 # In WSL, verify the project path exists
-ls -la /home/brj/babelfish/
+ls -la ~/babelfish/
 
 # Make sure uv is installed in WSL
 which uv
@@ -223,10 +223,10 @@ stockfish
 From Windows Command Prompt or PowerShell:
 ```cmd
 # Test if WSL can access the project
-wsl ls /home/brj/babelfish/
+wsl ls ~/babelfish/
 
 # Test if the command works
-wsl -d Ubuntu bash -c "cd /home/brj/babelfish && python main.py"
+wsl -d Ubuntu bash -c "cd ~/babelfish && python main.py"
 ```
 
 ## Contributing
