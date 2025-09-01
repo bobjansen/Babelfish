@@ -43,7 +43,7 @@ async def main():
             ),
             Tool(
                 name="evaluate_move",
-                description="Evaluate the quality of a specific move in a given position. Takes a FEN and a move in algebraic notation, returns move rating (Excellent/Good/Questionable/Bad/Blunder), evaluation change in centipawns, comparison with engine's preferred move, and alternative suggestions. Use this to assess if a particular move is strong or weak.",
+                description="MANDATORY FOR MOVE EVALUATION: Evaluate the quality of a specific move with authoritative engine assessment. Takes a FEN and a move in algebraic notation, returns definitive move rating (Excellent/Good/Questionable/Bad/Blunder), precise evaluation change in centipawns, comparison with engine's preferred move, and concrete alternatives. DO NOT assess move quality without using this tool - provides objective engine-based ratings that prevent move evaluation errors.",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -68,7 +68,7 @@ async def main():
             ),
             Tool(
                 name="find_tactics",
-                description="Identify tactical opportunities and patterns in a chess position. Analyzes position with high depth (18) to find forced sequences, mate threats, major tactical advantages, and tactical motifs. Returns evaluation assessment, key tactical moves with move types (capture, check, promotion), and educational guidance on common tactical patterns. Use when position may contain tactical elements.",
+                description="TACTICAL ANALYSIS AUTHORITY: Identify tactical opportunities with high-depth engine analysis (depth 22). Finds forced sequences, mate threats, major tactical advantages, and concrete tactical motifs. Returns precise evaluation assessment, specific tactical moves with types (capture, check, promotion), and tactical pattern identification. Use when analyzing positions for tactical elements - provides definitive tactical assessment.",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -82,7 +82,7 @@ async def main():
             ),
             Tool(
                 name="opening_analysis",
-                description="Analyze early-game positions (typically moves 1-15) and provide opening-specific guidance. Returns position evaluation, recommended moves, opening principles based on move number, piece development assessment for both sides, and strategic advice. Optionally accepts moves_played array to help identify opening line. Use for positions in the opening phase of the game.",
+                description="OPENING POSITION ANALYZER: Analyze early-game positions (moves 1-15) with opening-specific engine guidance. Returns precise position evaluation, concrete recommended moves, move-number-based opening principles, objective piece development assessment for both sides. Accepts optional moves_played array for opening identification. Use for opening phase positions to get authoritative opening analysis.",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -102,7 +102,7 @@ async def main():
             ),
             Tool(
                 name="endgame_guidance",
-                description="Analyze endgame positions (few pieces remaining) with specialized endgame techniques. Uses deep analysis (depth 20), identifies material imbalance, provides endgame-specific guidance based on piece configuration (K+P vs K, K+Q vs K, etc.), and gives practical endgame principles. Use for positions with limited material where endgame technique is important.",
+                description="ENDGAME TECHNIQUE AUTHORITY: Analyze endgame positions with specialized deep analysis (depth 25). Identifies exact material imbalances, provides definitive endgame guidance based on piece configuration (K+P vs K, K+Q vs K, etc.), and gives concrete endgame principles. Use for positions with limited material to get authoritative endgame technique analysis.",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -116,7 +116,7 @@ async def main():
             ),
             Tool(
                 name="explore_moves",
-                description="Test multiple candidate moves in a position and compare their outcomes. Takes a FEN and array of moves in algebraic notation, validates each move's legality, calculates resulting positions and evaluations, rates move quality, identifies move properties (captures, checks, promotions), and ranks moves by strength. Essential for testing chess ideas before making conclusions. Use this when you want to explore multiple move options and see their actual consequences.",
+                description="MOVE COMPARISON ENGINE: Test multiple candidate moves and compare outcomes with precise engine analysis. Takes FEN and move array, validates legality, calculates exact resulting positions and evaluations, provides objective move quality ratings, identifies concrete move properties (captures, checks, promotions), ranks moves by engine strength. ESSENTIAL for testing chess ideas - prevents move speculation by providing actual consequences.",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -144,7 +144,7 @@ async def main():
             ),
             Tool(
                 name="analyze_variations",
-                description="Analyze multiple-move sequences (variations) from a position. Takes a FEN and array of move sequences, where each sequence is 2-4 moves deep. Shows how each variation develops, the final evaluations, and key tactical/positional themes. Perfect for understanding opening lines, tactical sequences, or strategic plans. Use this when you need to see how move sequences play out over multiple moves.",
+                description="VARIATION SEQUENCE ANALYZER: Analyze multiple-move sequences (variations) with precise engine evaluation. Takes FEN and array of move sequences (3-6 moves deep), shows exact variation development, provides final position evaluations, identifies concrete tactical/positional themes. Essential for understanding multi-move sequences - reveals how strategic plans actually develop over multiple moves.",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -202,7 +202,7 @@ async def main():
             ),
             Tool(
                 name="show_engine_line",
-                description="Show the engine's main line (principal variation) for deep strategic understanding. Reveals the engine's complete winning plan or best continuation up to 20+ moves deep, showing how the position should be played step-by-step. Essential for understanding long-term plans, endgame technique, tactical sequences, and strategic concepts. Use this when you need to understand the ENGINE'S COMPLETE PLAN rather than just the next best move.",
+                description="ENGINE'S MASTER PLAN REVEALER: Show the engine's complete main line (principal variation) up to 20+ moves deep. Reveals the engine's definitive winning plan or best continuation with step-by-step analysis. Provides concrete long-term strategic understanding, precise endgame technique, detailed tactical sequences. Use when you need the ENGINE'S COMPLETE STRATEGIC PLAN rather than single-move analysis.",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -259,6 +259,31 @@ async def main():
                 },
             ),
             Tool(
+                name="visualize_board",
+                description="ESSENTIAL FOR BOARD UNDERSTANDING: Convert cryptic FEN notation into clear, human-readable board visualization. Shows piece positions with proper symbols, square names, file/rank labels, and key position information. CRITICAL for understanding what's actually on the board - FEN notation is compact but hard to interpret. Use this tool whenever you need to understand or discuss board positions clearly. Prevents misunderstanding of piece placement and board state.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "fen": {
+                            "type": "string",
+                            "description": "The chess position in FEN notation to visualize",
+                        },
+                        "show_coordinates": {
+                            "type": "boolean",
+                            "description": "Whether to show file/rank coordinates (default: true)",
+                            "default": True,
+                        },
+                        "highlight_pieces": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Optional list of piece types to highlight (e.g., ['pawn', 'king']) for educational focus",
+                            "default": [],
+                        },
+                    },
+                    "required": ["fen"],
+                },
+            ),
+            Tool(
                 name="list_legal_moves",
                 description="ESSENTIAL VERIFICATION TOOL: Generate a complete list of all legal moves in a chess position. ALWAYS use this tool before discussing or analyzing specific moves to prevent move hallucinations. Chess move legality is complex (blocked squares, pins, checks, castling rights) and cannot be reliably determined without this tool. Returns all possible moves in standard algebraic notation, categorized by move type. Critical for accuracy when explaining or evaluating any move.",
                 inputSchema={
@@ -303,6 +328,8 @@ async def main():
                 return await show_engine_main_line(arguments, analyzer)
             elif name == "analyze_chess_concepts":
                 return await analyze_chess_concepts(arguments, analyzer)
+            elif name == "visualize_board":
+                return await visualize_board_position(arguments, analyzer)
             elif name == "list_legal_moves":
                 return await list_legal_moves(arguments, analyzer)
             else:
@@ -1651,13 +1678,11 @@ async def analyze_chess_concepts(
         # Add educational summary
         response += f"""
 
-**🎓 Educational Summary:**
-• Use these concrete identifications to understand position characteristics
-• Chess concepts have precise definitions - learn them accurately
-• Combine multiple concepts to assess overall position strength
-• Practice identifying these patterns in your own games
-
-**💡 Learning Tip:** Master one concept at a time before combining them into overall position assessment."""
+**🎓 ANALYSIS DIRECTIVES:**
+• These identifications are definitive - use them as authoritative facts
+• Concept definitions are precise - do not deviate from these determinations
+• Multiple concept results must be combined for complete position assessment
+• Reference specific counts and examples when discussing position features"""
 
         return [TextContent(type="text", text=response)]
 
@@ -2081,6 +2106,209 @@ async def analyze_weak_squares(board: chess.Board) -> str:
 
     result += f"\n*Weak Square: Cannot be defended by friendly pawns | Outpost: Strong piece placement*\n\n"
     return result
+
+
+async def visualize_board_position(
+    arguments: dict, analyzer: ChessAnalyzer
+) -> list[TextContent]:
+    """Visualize a chess position in clear, human-readable format."""
+    fen = arguments.get("fen")
+    show_coordinates = arguments.get("show_coordinates", True)
+    highlight_pieces = arguments.get("highlight_pieces", [])
+
+    if not fen:
+        return [TextContent(type="text", text="❌ Please provide a FEN position")]
+
+    try:
+        board = chess.Board(fen)
+        to_move = "White" if board.turn else "Black"
+
+        # Parse FEN components for detailed info
+        fen_parts = fen.split()
+        position = fen_parts[0]
+        turn = fen_parts[1]
+        castling = fen_parts[2]
+        en_passant = fen_parts[3]
+        halfmove = fen_parts[4]
+        fullmove = fen_parts[5]
+
+        response = f"""📋 **BOARD VISUALIZATION**
+
+**🎯 Position Overview:**
+• **FEN:** `{fen}`
+• **To Move:** {to_move}
+• **Move Number:** {fullmove}
+• **Castling Rights:** {castling if castling != '-' else 'None'}
+• **En Passant:** {en_passant if en_passant != '-' else 'None'}
+
+**🏁 Visual Board Layout:**
+```"""
+
+        # Create the visual board
+        if show_coordinates:
+            response += "\n    a b c d e f g h"
+
+        for rank in range(7, -1, -1):  # 8th rank to 1st rank
+            row = ""
+            if show_coordinates:
+                row += f"  {rank+1} "
+            else:
+                row += "    "
+
+            for file in range(8):
+                square = chess.square(file, rank)
+                piece = board.piece_at(square)
+
+                if piece:
+                    # Use Unicode chess symbols for better readability
+                    symbol_map = {
+                        "K": "♔",
+                        "Q": "♕",
+                        "R": "♖",
+                        "B": "♗",
+                        "N": "♘",
+                        "P": "♙",  # White pieces
+                        "k": "♚",
+                        "q": "♛",
+                        "r": "♜",
+                        "b": "♝",
+                        "n": "♞",
+                        "p": "♟",  # Black pieces
+                    }
+                    symbol = symbol_map.get(piece.symbol(), piece.symbol())
+
+                    # Highlight specific pieces if requested
+                    piece_name = chess.piece_name(piece.piece_type).lower()
+                    if highlight_pieces and piece_name in highlight_pieces:
+                        symbol = f"[{symbol}]"
+                    else:
+                        symbol = f" {symbol} "
+                else:
+                    # Show square color for empty squares
+                    if (file + rank) % 2 == 0:
+                        symbol = " · "  # Dark square
+                    else:
+                        symbol = "   "  # Light square
+
+                row += symbol
+
+            if show_coordinates:
+                row += f" {rank+1}"
+            response += "\n" + row
+
+        if show_coordinates:
+            response += "\n    a b c d e f g h"
+
+        response += "\n```"
+
+        # Add piece inventory
+        piece_count = {"white": {}, "black": {}}
+        piece_names = {
+            chess.KING: "King",
+            chess.QUEEN: "Queen",
+            chess.ROOK: "Rook",
+            chess.BISHOP: "Bishop",
+            chess.KNIGHT: "Knight",
+            chess.PAWN: "Pawn",
+        }
+
+        for piece_type in [
+            chess.KING,
+            chess.QUEEN,
+            chess.ROOK,
+            chess.BISHOP,
+            chess.KNIGHT,
+            chess.PAWN,
+        ]:
+            white_count = len(board.pieces(piece_type, chess.WHITE))
+            black_count = len(board.pieces(piece_type, chess.BLACK))
+
+            if white_count > 0:
+                piece_count["white"][piece_names[piece_type]] = white_count
+            if black_count > 0:
+                piece_count["black"][piece_names[piece_type]] = black_count
+
+        response += f"""
+
+**📊 Piece Inventory:**
+• **White:** """
+        white_pieces = []
+        for piece, count in piece_count["white"].items():
+            if count > 1:
+                white_pieces.append(f"{count} {piece}s")
+            else:
+                white_pieces.append(f"{count} {piece}")
+        response += ", ".join(white_pieces) if white_pieces else "None"
+
+        response += f"""
+• **Black:** """
+        black_pieces = []
+        for piece, count in piece_count["black"].items():
+            if count > 1:
+                black_pieces.append(f"{count} {piece}s")
+            else:
+                black_pieces.append(f"{count} {piece}")
+        response += ", ".join(black_pieces) if black_pieces else "None"
+
+        # Add key square information
+        white_king = board.king(chess.WHITE)
+        black_king = board.king(chess.BLACK)
+
+        response += f"""
+
+**👑 Key Positions:**
+• **White King:** {chess.square_name(white_king) if white_king else 'Not found'}
+• **Black King:** {chess.square_name(black_king) if black_king else 'Not found'}"""
+
+        # Show check status
+        if board.is_check():
+            response += f"\n• **⚠️ CHECK:** {to_move} king is in check!"
+
+        # Show game status
+        if board.is_checkmate():
+            winner = "Black" if board.turn else "White"
+            response += f"\n• **🎯 CHECKMATE:** {winner} wins!"
+        elif board.is_stalemate():
+            response += f"\n• **🤝 STALEMATE:** Draw"
+        elif board.is_insufficient_material():
+            response += f"\n• **📋 INSUFFICIENT MATERIAL:** Draw"
+
+        # Material count
+        material_values = {
+            chess.QUEEN: 9,
+            chess.ROOK: 5,
+            chess.BISHOP: 3,
+            chess.KNIGHT: 3,
+            chess.PAWN: 1,
+        }
+        white_material = sum(
+            len(board.pieces(piece_type, chess.WHITE)) * value
+            for piece_type, value in material_values.items()
+        )
+        black_material = sum(
+            len(board.pieces(piece_type, chess.BLACK)) * value
+            for piece_type, value in material_values.items()
+        )
+
+        response += f"""
+
+**⚖️ Material Balance:**
+• **White:** {white_material} points
+• **Black:** {black_material} points
+• **Difference:** {white_material - black_material:+d} (favoring {'White' if white_material > black_material else 'Black' if black_material > white_material else 'Equal'})
+
+**🎯 CRITICAL BOARD FACTS:**
+• Exact piece locations shown with coordinates - use these for accurate analysis
+• Material count is precise - verify any material claims against this data
+• Pawn positions clearly visible - use for pawn structure and majority analysis
+• King positions identified - essential for king safety and endgame analysis"""
+
+        return [TextContent(type="text", text=response)]
+
+    except Exception as e:
+        return [
+            TextContent(type="text", text=f"❌ Board visualization error: {str(e)}")
+        ]
 
 
 async def analyze_variations(
