@@ -11,6 +11,7 @@ import sys
 import json
 import argparse
 import logging
+import time
 from typing import Dict, Any, List, Optional
 import requests
 from rich.console import Console
@@ -65,8 +66,9 @@ class OpenRouterClient:
         temperature: float = 0.7,
         max_tokens: int = 4000,
         stream: bool = False,
+        max_retries: int = 3,
     ) -> Dict[str, Any]:
-        """Send chat completion request with optional tool calling."""
+        """Send chat completion request with optional tool calling and retry logic."""
 
         payload = {
             "model": model,
@@ -80,15 +82,54 @@ class OpenRouterClient:
             payload["tools"] = tools
             payload["tool_choice"] = tool_choice
 
-        try:
-            response = self.session.post(
-                f"{self.base_url}/chat/completions", json=payload
-            )
-            response.raise_for_status()
-            return response.json()
-        except Exception as e:
-            logger.error(f"Chat completion failed: {e}")
-            raise
+        last_error = None
+        for attempt in range(max_retries + 1):
+            try:
+                response = self.session.post(
+                    f"{self.base_url}/chat/completions", json=payload
+                )
+                response.raise_for_status()
+                return response.json()
+                
+            except requests.exceptions.HTTPError as e:
+                last_error = e
+                if e.response.status_code == 429:  # Rate limit
+                    if attempt < max_retries:
+                        # Exponential backoff: 1s, 2s, 4s
+                        wait_time = 2 ** attempt
+                        logger.warning(f"Rate limit hit. Waiting {wait_time}s before retry {attempt + 1}/{max_retries}")
+                        time.sleep(wait_time)
+                        continue
+                    else:
+                        logger.error("Rate limit exceeded after all retries")
+                        raise e
+                elif e.response.status_code >= 500:  # Server error
+                    if attempt < max_retries:
+                        wait_time = 1
+                        logger.warning(f"Server error {e.response.status_code}. Waiting {wait_time}s before retry {attempt + 1}/{max_retries}")
+                        time.sleep(wait_time)
+                        continue
+                    else:
+                        logger.error("Server error after all retries")
+                        raise e
+                else:
+                    # Client error (4xx), don't retry
+                    logger.error(f"Chat completion failed: {e}")
+                    raise e
+                    
+            except Exception as e:
+                last_error = e
+                if attempt < max_retries:
+                    wait_time = 1
+                    logger.warning(f"Request failed: {e}. Waiting {wait_time}s before retry {attempt + 1}/{max_retries}")
+                    time.sleep(wait_time)
+                    continue
+                else:
+                    logger.error(f"Chat completion failed after all retries: {e}")
+                    raise e
+        
+        # This should never be reached, but just in case
+        raise last_error or Exception("Unknown error in chat completion")
 
 
 class MCPToolConverter:
@@ -196,19 +237,27 @@ class BabelfishMCPCLI:
         self, result: Dict[str, Any], tool_name: str
     ) -> Dict[str, Any]:
         """Truncate large results to avoid API message size limits."""
-        MAX_CHARS = 8000  # Conservative limit for OpenRouter
+        MAX_CHARS = 12000  # Increased limit for chess analysis responses
 
         result_str = json.dumps(result, default=str)
         if len(result_str) > MAX_CHARS:
-            # Create a summary instead
-            summary_result = {
-                "status": result.get("status", "success"),
-                "message": f"Result too large ({len(result_str)} chars). ",
-                "tool_name": tool_name,
-                "truncated": True,
-            }
-
-            return summary_result
+            # For chess tools, try to preserve the message content
+            if tool_name in ["analyze_position", "suggest_move", "get_principal_variation", 
+                           "evaluate_move_quality", "find_tactical_motifs", "analyze_endgame", "explain_position"]:
+                # Truncate the message but preserve structure
+                if "message" in result and len(result["message"]) > MAX_CHARS - 500:
+                    result["message"] = result["message"][:MAX_CHARS - 500] + "\n\n*[Response truncated for length]*"
+                    result["truncated"] = True
+                return result
+            else:
+                # Create a summary for other tools
+                summary_result = {
+                    "status": result.get("status", "success"),
+                    "message": f"Result too large ({len(result_str)} chars). ",
+                    "tool_name": tool_name,
+                    "truncated": True,
+                }
+                return summary_result
 
         return result
 
@@ -219,15 +268,53 @@ class BabelfishMCPCLI:
         results = []
 
         for tool_call in tool_calls:
-            tool_name = tool_call["function"]["name"]
-            arguments = json.loads(tool_call["function"]["arguments"])
-            tool_call_id = tool_call["id"]
+            try:
+                # Extract tool information with error handling
+                function_info = tool_call.get("function", {})
+                tool_name = function_info.get("name", "")
+                arguments_str = function_info.get("arguments", "{}")
+                tool_call_id = tool_call.get("id", "unknown")
 
-            console.print(f"[blue]🔧 Executing tool:[/blue] {tool_name}")
-            console.print(f"[dim]Arguments: {arguments}[/dim]")
+                # Parse arguments safely first
+                try:
+                    arguments = json.loads(arguments_str)
+                except json.JSONDecodeError as e:
+                    console.print(f"[red]⚠️  Error parsing arguments: {e}[/red]")
+                    arguments = {}
 
-            # Execute the tool
-            result = self.execute_tool(tool_name, arguments, user_id)
+                if not tool_name:
+                    # Try to infer the tool name from the arguments
+                    inferred_name = self._infer_tool_name(arguments)
+                    if inferred_name:
+                        tool_name = inferred_name
+                        console.print(f"[yellow]⚠️  Tool call missing name, inferred: {tool_name}[/yellow]")
+                    else:
+                        console.print("[red]⚠️  Warning: Tool call missing name and cannot infer[/red]")
+                        console.print(f"[dim]Tool call structure: {tool_call}[/dim]")
+                        console.print(f"[dim]Parsed arguments: {arguments}[/dim]")
+                        continue
+
+                # Final validation before execution
+                if tool_name not in self.tool_router.tools:
+                    console.print(f"[red]⚠️  Warning: Unknown tool '{tool_name}'[/red]")
+                    available = list(self.tool_router.tools.keys())
+                    console.print(f"[dim]Available tools: {', '.join(available)}[/dim]")
+                    continue
+
+                console.print(f"[blue]🔧 Executing tool:[/blue] {tool_name}")
+                console.print(f"[dim]Arguments: {arguments}[/dim]")
+
+                # Execute the tool
+                result = self.execute_tool(tool_name, arguments, user_id)
+                
+                # Display the tool result to the user
+                self._display_tool_result(tool_name, result)
+                
+            except Exception as e:
+                console.print(f"[red]⚠️  Error processing tool call: {e}[/red]")
+                tool_name = "unknown"
+                tool_call_id = tool_call.get("id", "unknown")
+                result = json.dumps({"error": str(e), "status": "error"})
 
             # Add result to conversation
             self.conversation.add_tool_result(tool_call_id, tool_name, result)
@@ -267,8 +354,8 @@ class BabelfishMCPCLI:
                 # Add user message to conversation
                 self.conversation.add_user_message(user_input)
 
-                # Start tool call loop
-                max_iterations = 5
+                # Start tool call loop  
+                max_iterations = 8  # Increased from 5 to handle complex chess analysis
                 iteration = 0
 
                 while iteration < max_iterations:
@@ -300,6 +387,8 @@ class BabelfishMCPCLI:
                     # Handle tool calls
                     if tool_calls and finish_reason == "tool_calls":
                         self.process_tool_calls(tool_calls, user_id)
+                        # Add a longer delay to prevent rapid API calls and respect rate limits
+                        time.sleep(1.0)  # Increased from 0.5s to 1s
                         continue  # Continue the loop for follow-up
                     else:
                         break  # No more tool calls, exit loop
@@ -312,8 +401,19 @@ class BabelfishMCPCLI:
             except KeyboardInterrupt:
                 console.print("\n[yellow]Interrupted by user[/yellow]")
                 break
+            except requests.exceptions.HTTPError as e:
+                if e.response.status_code == 429:
+                    console.print(f"[yellow]⚠️  Rate limit exceeded. Please wait a moment before trying again.[/yellow]")
+                    console.print(f"[dim]You may have hit OpenRouter's rate limits. Consider using a different model or waiting a few minutes.[/dim]")
+                elif e.response.status_code == 401:
+                    console.print(f"[red]❌ Authentication failed. Please check your OpenRouter API key.[/red]")
+                elif e.response.status_code >= 500:
+                    console.print(f"[red]❌ Server error ({e.response.status_code}). OpenRouter may be experiencing issues.[/red]")
+                else:
+                    console.print(f"[red]❌ API Error ({e.response.status_code}): {e}[/red]")
+                logger.error(f"API error: {e}")
             except Exception as e:
-                console.print(f"[red]Error: {e}[/red]")
+                console.print(f"[red]❌ Error: {e}[/red]")
                 logger.error(f"Chat loop error: {e}")
 
     def _handle_command(self, command: str):
@@ -335,6 +435,8 @@ class BabelfishMCPCLI:
             model_name = command.split(" ", 1)[1]
             self.model = model_name
             console.print(f"[green]Model set to: {model_name}[/green]")
+        elif command == "/limits":
+            self._show_rate_limits()
         else:
             console.print(f"[red]Unknown command: {command}[/red]")
 
@@ -350,6 +452,7 @@ class BabelfishMCPCLI:
         help_table.add_row("/reset", "Reset conversation history")
         help_table.add_row("/history", "Show conversation history")
         help_table.add_row("/model <name>", "Change the current model")
+        help_table.add_row("/limits", "Show rate limit information")
         help_table.add_row("quit/exit/q", "Exit the CLI")
 
         console.print(help_table)
@@ -418,6 +521,139 @@ class BabelfishMCPCLI:
                 content += f" [Tool calls: {len(msg['tool_calls'])}]"
 
             console.print(f"[dim]{i}.[/dim] [bold]{role}[/bold]: {content}")
+
+    def _show_rate_limits(self):
+        """Show rate limit information and tips."""
+        limits_panel = Panel(
+            """[bold yellow]Rate Limit Information[/bold yellow]
+
+[cyan]Current Settings:[/cyan]
+• Retry attempts: 3 with exponential backoff
+• Delay between tool calls: 1 second
+• Max iterations per conversation: 8
+
+[cyan]If you encounter rate limits:[/cyan]
+• Wait 1-2 minutes between complex requests
+• Try using a different model (e.g., Claude Haiku is faster/cheaper)
+• Consider reducing analysis depth for chess tools
+• Break complex queries into smaller parts
+
+[cyan]Rate Limit Friendly Models:[/cyan]
+• anthropic/claude-3-haiku (fastest, cheapest)
+• openai/gpt-4o-mini (good balance)
+• meta-llama/llama-3.1-8b-instruct (economical)
+
+[dim]Note: Rate limits vary by model and your OpenRouter plan.[/dim]""",
+            title="Rate Limits",
+            border_style="yellow"
+        )
+        console.print(limits_panel)
+
+    def _infer_tool_name(self, arguments: Dict[str, Any]) -> Optional[str]:
+        """Infer the tool name from arguments when name is missing."""
+        if not isinstance(arguments, dict):
+            return None
+        
+        # Get available tools from the router
+        available_tools = list(self.tool_router.tools.keys())
+        
+        # Inference logic based on argument patterns
+        if "fen" in arguments:
+            if "move" in arguments:
+                # Has both fen and move -> likely evaluate_move_quality
+                return "evaluate_move_quality" if "evaluate_move_quality" in available_tools else None
+            elif "moves" in arguments:
+                # Has fen and moves -> likely analyze_game  
+                return "analyze_game" if "analyze_game" in available_tools else None
+            elif "max_moves" in arguments:
+                # Has fen with max_moves -> likely get_principal_variation
+                return "get_principal_variation" if "get_principal_variation" in available_tools else None
+            elif arguments.get("depth", 0) >= 25:
+                # Has fen with very high depth (25+) -> likely analyze_endgame
+                return "analyze_endgame" if "analyze_endgame" in available_tools else None
+            else:
+                # Just has fen -> could be several tools, default to most common
+                # Priority: analyze_position > explain_position > suggest_move
+                for tool in ["analyze_position", "explain_position", "suggest_move"]:
+                    if tool in available_tools:
+                        return tool
+        elif "moves" in arguments:
+            # Only has moves -> analyze_game
+            return "analyze_game" if "analyze_game" in available_tools else None
+        
+        return None
+
+    def _display_tool_result(self, tool_name: str, result_json: str):
+        """Display the tool result to the user in a nicely formatted way."""
+        try:
+            # Parse the result
+            result = json.loads(result_json)
+            
+            if result.get("status") == "success":
+                message = result.get("message", "")
+                
+                # Check if it's a chess tool result (contains the 🐟 symbol)
+                if "🐟" in message:
+                    # Display chess analysis results with special formatting
+                    console.print(f"\n[green]📋 Tool Result ({tool_name}):[/green]")
+                    
+                    # Split the message into sections for better readability
+                    lines = message.split('\n')
+                    formatted_lines = []
+                    
+                    for line in lines:
+                        if line.startswith('🐟'):
+                            # Main header - make it stand out
+                            formatted_lines.append(f"[bold magenta on black]{line}[/bold magenta on black]")
+                        elif line.startswith('**') and line.endswith('**') and len(line) > 4:
+                            # Bold section headers - remove ** and color
+                            clean_line = line.replace('**', '')
+                            formatted_lines.append(f"[bold yellow]{clean_line}[/bold yellow]")
+                        elif line.startswith('*') and line.endswith('*') and not line.startswith('**'):
+                            # Italic text (analysis notes) - remove * and make dim
+                            clean_line = line.replace('*', '')
+                            formatted_lines.append(f"[dim italic]{clean_line}[/dim italic]")
+                        elif line.strip() and len(line) > 0 and (line.strip()[0].isdigit() or line.startswith('•')):
+                            # Numbered lists or bullet points - highlight moves
+                            formatted_lines.append(f"[bright_cyan]{line}[/bright_cyan]")
+                        elif line.strip():
+                            formatted_lines.append(f"[white]{line}[/white]")
+                        else:
+                            formatted_lines.append(line)  # Keep empty lines as-is
+                    
+                    formatted_message = '\n'.join(formatted_lines)
+                    console.print(formatted_message)
+                    console.print("")  # Add spacing
+                    
+                else:
+                    # Non-chess tool result
+                    console.print(f"\n[green]📋 Tool Result ({tool_name}):[/green]")
+                    console.print(message)
+                    console.print("")
+                    
+            elif result.get("status") == "error":
+                error_msg = result.get("message", "Unknown error")
+                console.print(f"\n[red]❌ Tool Error ({tool_name}):[/red]")
+                console.print(f"[red]{error_msg}[/red]")
+                console.print("")
+                
+            else:
+                # Fallback for unexpected result format
+                console.print(f"\n[yellow]🔧 Tool Output ({tool_name}):[/yellow]")
+                console.print(result_json[:500])  # Limit length
+                if len(result_json) > 500:
+                    console.print("[dim]...[truncated][/dim]")
+                console.print("")
+                
+        except json.JSONDecodeError:
+            # If result isn't valid JSON, display as-is (truncated)
+            console.print(f"\n[yellow]🔧 Tool Output ({tool_name}):[/yellow]")
+            console.print(result_json[:500])
+            if len(result_json) > 500:
+                console.print("[dim]...[truncated][/dim]")
+            console.print("")
+        except Exception as e:
+            console.print(f"\n[red]❌ Error displaying tool result: {e}[/red]")
 
 
 def main():
