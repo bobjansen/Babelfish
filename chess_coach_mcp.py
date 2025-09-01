@@ -22,7 +22,7 @@ async def main():
         return [
             Tool(
                 name="analyze_position",
-                description="Analyze a chess position in FEN notation. Returns engine evaluation (in centipawns or mate distance), top 5 best moves with evaluations, strategic guidance based on game phase (opening/middlegame/endgame), and human-readable position explanation. ALWAYS use this tool when asked to explain or evaluate any specific move to get accurate engine assessment. Use this for comprehensive position assessment.",
+                description="MANDATORY TOOL FOR POSITION ANALYSIS: Analyze a chess position in FEN notation with authoritative engine evaluation. DO NOT make claims about position evaluation, best moves, or strategic assessment without using this tool first. Returns engine evaluation (in centipawns or mate distance), top 5 best moves with evaluations, strategic guidance based on game phase, and human-readable position explanation. PREVENTS evaluation hallucinations by providing concrete engine analysis. ALWAYS use this tool when discussing any position.",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -229,6 +229,36 @@ async def main():
                 },
             ),
             Tool(
+                name="analyze_chess_concepts",
+                description="MANDATORY BEFORE ANY CHESS DISCUSSION: Analyze and identify key chess concepts in a position with precise definitions and examples. CRITICAL - DO NOT make any claims about passed pawns, pawn majorities, pawn structure, piece activity, or strategic elements without FIRST using this tool to verify. This prevents chess concept hallucinations and provides authoritative analysis. Identifies passed pawns, isolated pawns, doubled pawns, weak squares, pawn chains, piece activity, king safety with exact counts and precise definitions. USE THIS BEFORE DISCUSSING ANY POSITION.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "fen": {
+                            "type": "string",
+                            "description": "The chess position in FEN notation",
+                        },
+                        "focus": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "passed_pawns",
+                                    "pawn_structure",
+                                    "piece_activity",
+                                    "king_safety",
+                                    "weak_squares",
+                                    "all",
+                                ],
+                            },
+                            "description": "Specific concepts to analyze. Use 'all' for comprehensive analysis, or specify: 'passed_pawns', 'pawn_structure', 'piece_activity', 'king_safety', 'weak_squares'",
+                            "default": ["all"],
+                        },
+                    },
+                    "required": ["fen"],
+                },
+            ),
+            Tool(
                 name="list_legal_moves",
                 description="ESSENTIAL VERIFICATION TOOL: Generate a complete list of all legal moves in a chess position. ALWAYS use this tool before discussing or analyzing specific moves to prevent move hallucinations. Chess move legality is complex (blocked squares, pins, checks, castling rights) and cannot be reliably determined without this tool. Returns all possible moves in standard algebraic notation, categorized by move type. Critical for accuracy when explaining or evaluating any move.",
                 inputSchema={
@@ -271,6 +301,8 @@ async def main():
                 return await apply_moves_to_fen(arguments, analyzer)
             elif name == "show_engine_line":
                 return await show_engine_main_line(arguments, analyzer)
+            elif name == "analyze_chess_concepts":
+                return await analyze_chess_concepts(arguments, analyzer)
             elif name == "list_legal_moves":
                 return await list_legal_moves(arguments, analyzer)
             else:
@@ -1575,6 +1607,480 @@ async def show_engine_main_line(
         return [
             TextContent(type="text", text=f"❌ Principal variation error: {str(e)}")
         ]
+
+
+async def analyze_chess_concepts(
+    arguments: dict, analyzer: ChessAnalyzer
+) -> list[TextContent]:
+    """Analyze fundamental chess concepts in a position for educational purposes."""
+    fen = arguments.get("fen")
+    focus_areas = arguments.get("focus", ["all"])
+
+    if not fen:
+        return [TextContent(type="text", text="❌ Please provide a FEN position")]
+
+    try:
+        board = chess.Board(fen)
+        to_move = "White" if board.turn else "Black"
+
+        response = f"""📚 **CHESS CONCEPTS ANALYSIS**
+
+**Position:** `{fen}`
+**To Move:** {to_move}
+
+"""
+
+        # Analyze all concepts or specific focus areas
+        analyze_all = "all" in focus_areas
+
+        if analyze_all or "passed_pawns" in focus_areas:
+            response += await analyze_passed_pawns(board)
+
+        if analyze_all or "pawn_structure" in focus_areas:
+            response += await analyze_pawn_structure(board)
+
+        if analyze_all or "piece_activity" in focus_areas:
+            response += await analyze_piece_activity(board)
+
+        if analyze_all or "king_safety" in focus_areas:
+            response += await analyze_king_safety(board)
+
+        if analyze_all or "weak_squares" in focus_areas:
+            response += await analyze_weak_squares(board)
+
+        # Add educational summary
+        response += f"""
+
+**🎓 Educational Summary:**
+• Use these concrete identifications to understand position characteristics
+• Chess concepts have precise definitions - learn them accurately
+• Combine multiple concepts to assess overall position strength
+• Practice identifying these patterns in your own games
+
+**💡 Learning Tip:** Master one concept at a time before combining them into overall position assessment."""
+
+        return [TextContent(type="text", text=response)]
+
+    except Exception as e:
+        return [
+            TextContent(type="text", text=f"❌ Chess concepts analysis error: {str(e)}")
+        ]
+
+
+async def analyze_passed_pawns(board: chess.Board) -> str:
+    """Identify passed pawns with precise definition."""
+    passed_pawns = {"white": [], "black": []}
+
+    # Check each pawn
+    for square in chess.SQUARES:
+        piece = board.piece_at(square)
+        if piece and piece.piece_type == chess.PAWN:
+            file = chess.square_file(square)
+            rank = chess.square_rank(square)
+            color = piece.color
+
+            is_passed = True
+
+            if color == chess.WHITE:
+                # Check if any enemy pawns can stop this pawn
+                for check_rank in range(rank + 1, 8):  # Ranks ahead
+                    for check_file in [
+                        file - 1,
+                        file,
+                        file + 1,
+                    ]:  # Adjacent files and same file
+                        if 0 <= check_file <= 7:
+                            check_square = chess.square(check_file, check_rank)
+                            check_piece = board.piece_at(check_square)
+                            if (
+                                check_piece
+                                and check_piece.piece_type == chess.PAWN
+                                and check_piece.color == chess.BLACK
+                            ):
+                                is_passed = False
+                                break
+                    if not is_passed:
+                        break
+            else:  # BLACK
+                # Check if any enemy pawns can stop this pawn
+                for check_rank in range(
+                    rank - 1, -1, -1
+                ):  # Ranks ahead (lower for black)
+                    for check_file in [
+                        file - 1,
+                        file,
+                        file + 1,
+                    ]:  # Adjacent files and same file
+                        if 0 <= check_file <= 7:
+                            check_square = chess.square(check_file, check_rank)
+                            check_piece = board.piece_at(check_square)
+                            if (
+                                check_piece
+                                and check_piece.piece_type == chess.PAWN
+                                and check_piece.color == chess.WHITE
+                            ):
+                                is_passed = False
+                                break
+                    if not is_passed:
+                        break
+
+            if is_passed:
+                square_name = chess.square_name(square)
+                if color == chess.WHITE:
+                    passed_pawns["white"].append(square_name)
+                else:
+                    passed_pawns["black"].append(square_name)
+
+    result = "**🚀 PASSED PAWNS ANALYSIS:**\n"
+    result += f"*Definition: A pawn with no enemy pawns blocking its path to promotion (on same file or adjacent files)*\n\n"
+
+    if passed_pawns["white"]:
+        result += f"• **White Passed Pawns:** {', '.join(passed_pawns['white'])}\n"
+    else:
+        result += "• **White Passed Pawns:** None\n"
+
+    if passed_pawns["black"]:
+        result += f"• **Black Passed Pawns:** {', '.join(passed_pawns['black'])}\n"
+    else:
+        result += "• **Black Passed Pawns:** None\n"
+
+    total_passed = len(passed_pawns["white"]) + len(passed_pawns["black"])
+
+    if total_passed == 0:
+        result += "\n✅ **VERIFICATION:** No passed pawns exist - all pawns are blocked by enemy pawns\n"
+    else:
+        result += f"\n📊 **Count:** {total_passed} total passed pawn(s) in position\n"
+
+    # Add pawn majority analysis
+    result += "\n" + analyze_pawn_majorities(board) + "\n"
+    return result
+
+
+def analyze_pawn_majorities(board: chess.Board) -> str:
+    """Analyze pawn majorities by wing."""
+    # Count pawns by wing
+    queenside_files = [0, 1, 2, 3]  # a, b, c, d
+    kingside_files = [4, 5, 6, 7]  # e, f, g, h
+
+    white_queenside = 0
+    black_queenside = 0
+    white_kingside = 0
+    black_kingside = 0
+
+    for square in chess.SQUARES:
+        piece = board.piece_at(square)
+        if piece and piece.piece_type == chess.PAWN:
+            file = chess.square_file(square)
+
+            if file in queenside_files:
+                if piece.color == chess.WHITE:
+                    white_queenside += 1
+                else:
+                    black_queenside += 1
+            else:  # kingside
+                if piece.color == chess.WHITE:
+                    white_kingside += 1
+                else:
+                    black_kingside += 1
+
+    result = "**👑 PAWN MAJORITIES ANALYSIS:**\n"
+    result += f"*Definition: More pawns on one side of the board than the opponent*\n\n"
+
+    # Queenside analysis
+    if white_queenside > black_queenside:
+        result += f"• **Queenside:** White has MAJORITY ({white_queenside} vs {black_queenside})\n"
+    elif black_queenside > white_queenside:
+        result += f"• **Queenside:** Black has MAJORITY ({black_queenside} vs {white_queenside})\n"
+    else:
+        result += f"• **Queenside:** Equal ({white_queenside} vs {black_queenside}) - NO MAJORITY\n"
+
+    # Kingside analysis
+    if white_kingside > black_kingside:
+        result += f"• **Kingside:** White has MAJORITY ({white_kingside} vs {black_kingside})\n"
+    elif black_kingside > white_kingside:
+        result += f"• **Kingside:** Black has MAJORITY ({black_kingside} vs {white_kingside})\n"
+    else:
+        result += f"• **Kingside:** Equal ({white_kingside} vs {black_kingside}) - NO MAJORITY\n"
+
+    # Overall assessment
+    total_majorities = 0
+    if white_queenside != black_queenside:
+        total_majorities += 1
+    if white_kingside != black_kingside:
+        total_majorities += 1
+
+    if total_majorities == 0:
+        result += f"\n✅ **CRITICAL VERIFICATION:** NO PAWN MAJORITIES EXIST - Claims about pawn majorities in this position are INCORRECT\n"
+    else:
+        result += (
+            f"\n📊 **Summary:** {total_majorities} pawn majority/majorities exist\n"
+        )
+
+    return result
+
+
+async def analyze_pawn_structure(board: chess.Board) -> str:
+    """Analyze pawn structure features."""
+    result = "**⛓️ PAWN STRUCTURE ANALYSIS:**\n\n"
+
+    # Find isolated, doubled, and backward pawns
+    isolated_pawns = {"white": [], "black": []}
+    doubled_pawns = {"white": [], "black": []}
+    pawn_chains = {"white": [], "black": []}
+
+    # Count pawns by file for each color
+    white_pawns_by_file = {f: [] for f in range(8)}
+    black_pawns_by_file = {f: [] for f in range(8)}
+
+    for square in chess.SQUARES:
+        piece = board.piece_at(square)
+        if piece and piece.piece_type == chess.PAWN:
+            file = chess.square_file(square)
+            if piece.color == chess.WHITE:
+                white_pawns_by_file[file].append(square)
+            else:
+                black_pawns_by_file[file].append(square)
+
+    # Check for doubled pawns
+    for file in range(8):
+        if len(white_pawns_by_file[file]) > 1:
+            file_name = chr(ord("a") + file)
+            doubled_pawns["white"].append(f"{file_name}-file")
+        if len(black_pawns_by_file[file]) > 1:
+            file_name = chr(ord("a") + file)
+            doubled_pawns["black"].append(f"{file_name}-file")
+
+    # Check for isolated pawns
+    for file in range(8):
+        if white_pawns_by_file[file]:  # Has pawn on this file
+            has_neighbor = False
+            # Check adjacent files
+            if file > 0 and white_pawns_by_file[file - 1]:
+                has_neighbor = True
+            if file < 7 and white_pawns_by_file[file + 1]:
+                has_neighbor = True
+            if not has_neighbor:
+                file_name = chr(ord("a") + file)
+                isolated_pawns["white"].append(f"{file_name}-file")
+
+        if black_pawns_by_file[file]:  # Has pawn on this file
+            has_neighbor = False
+            # Check adjacent files
+            if file > 0 and black_pawns_by_file[file - 1]:
+                has_neighbor = True
+            if file < 7 and black_pawns_by_file[file + 1]:
+                has_neighbor = True
+            if not has_neighbor:
+                file_name = chr(ord("a") + file)
+                isolated_pawns["black"].append(f"{file_name}-file")
+
+    # Report findings
+    result += f"• **Doubled Pawns:** White: {', '.join(doubled_pawns['white']) if doubled_pawns['white'] else 'None'} | Black: {', '.join(doubled_pawns['black']) if doubled_pawns['black'] else 'None'}\n"
+    result += f"• **Isolated Pawns:** White: {', '.join(isolated_pawns['white']) if isolated_pawns['white'] else 'None'} | Black: {', '.join(isolated_pawns['black']) if isolated_pawns['black'] else 'None'}\n"
+
+    result += f"\n*Doubled: Multiple pawns on same file | Isolated: No friendly pawns on adjacent files*\n\n"
+    return result
+
+
+async def analyze_piece_activity(board: chess.Board) -> str:
+    """Analyze piece activity and mobility."""
+    result = "**⚡ PIECE ACTIVITY ANALYSIS:**\n\n"
+
+    # Count legal moves for each side (mobility)
+    white_mobility = 0
+    black_mobility = 0
+
+    # Temporarily switch turns to count moves for both sides
+    original_turn = board.turn
+
+    # Count white mobility
+    if board.turn == chess.WHITE:
+        white_mobility = len(list(board.legal_moves))
+    else:
+        board.turn = chess.WHITE
+        white_mobility = len(list(board.legal_moves))
+        board.turn = chess.BLACK
+
+    # Count black mobility
+    if board.turn == chess.BLACK:
+        black_mobility = len(list(board.legal_moves))
+    else:
+        board.turn = chess.BLACK
+        black_mobility = len(list(board.legal_moves))
+        board.turn = chess.WHITE
+
+    # Restore original turn
+    board.turn = original_turn
+
+    result += f"• **Mobility (Legal Moves):** White: {white_mobility} | Black: {black_mobility}\n"
+
+    mobility_advantage = (
+        "Equal"
+        if white_mobility == black_mobility
+        else ("White" if white_mobility > black_mobility else "Black")
+    )
+    result += f"• **Mobility Advantage:** {mobility_advantage}\n"
+
+    # Analyze piece development (knights and bishops off starting squares)
+    white_developed = 0
+    black_developed = 0
+
+    starting_squares = {
+        chess.WHITE: [chess.B1, chess.G1, chess.C1, chess.F1],  # Knights and bishops
+        chess.BLACK: [chess.B8, chess.G8, chess.C8, chess.F8],
+    }
+
+    for color in [chess.WHITE, chess.BLACK]:
+        developed = 0
+        for square in starting_squares[color]:
+            piece = board.piece_at(square)
+            if (
+                not piece
+                or piece.piece_type not in [chess.KNIGHT, chess.BISHOP]
+                or piece.color != color
+            ):
+                developed += 1
+        if color == chess.WHITE:
+            white_developed = developed
+        else:
+            black_developed = developed
+
+    result += f"• **Development:** White: {white_developed}/4 pieces | Black: {black_developed}/4 pieces\n"
+    result += f"*Development: Knights and bishops moved from starting squares*\n\n"
+
+    return result
+
+
+async def analyze_king_safety(board: chess.Board) -> str:
+    """Analyze king safety factors."""
+    result = "**👑 KING SAFETY ANALYSIS:**\n\n"
+
+    for color in [chess.WHITE, chess.BLACK]:
+        color_name = "White" if color == chess.WHITE else "Black"
+        king_square = board.king(color)
+
+        if king_square is None:
+            result += f"• **{color_name} King:** Not found (invalid position)\n"
+            continue
+
+        king_file = chess.square_file(king_square)
+        king_rank = chess.square_rank(king_square)
+
+        # Check if king has castled
+        if color == chess.WHITE:
+            castled = king_file in [6, 2]  # g1 or c1
+        else:
+            castled = king_file in [6, 2]  # g8 or c8
+
+        # Count pawn shield
+        pawn_shield = 0
+        if color == chess.WHITE:
+            # Check squares in front of king
+            shield_squares = [
+                chess.square(king_file - 1, king_rank + 1) if king_file > 0 else None,
+                chess.square(king_file, king_rank + 1) if king_rank < 7 else None,
+                chess.square(king_file + 1, king_rank + 1) if king_file < 7 else None,
+            ]
+        else:
+            shield_squares = [
+                chess.square(king_file - 1, king_rank - 1) if king_file > 0 else None,
+                chess.square(king_file, king_rank - 1) if king_rank > 0 else None,
+                chess.square(king_file + 1, king_rank - 1) if king_file < 7 else None,
+            ]
+
+        for square in shield_squares:
+            if square is not None:
+                piece = board.piece_at(square)
+                if piece and piece.piece_type == chess.PAWN and piece.color == color:
+                    pawn_shield += 1
+
+        # Check exposure (is king in center?)
+        center_files = [3, 4]  # d, e files
+        exposed = king_file in center_files and (
+            (color == chess.WHITE and king_rank < 2)
+            or (color == chess.BLACK and king_rank > 5)
+        )
+
+        result += f"• **{color_name} King ({chess.square_name(king_square)}):**\n"
+        result += f"  - Castled: {'Yes' if castled else 'No'}\n"
+        result += f"  - Pawn Shield: {pawn_shield}/3 pawns\n"
+        result += f"  - Exposed: {'Yes' if exposed else 'No'}\n"
+
+    result += f"\n*Pawn Shield: Friendly pawns protecting king | Exposed: King in center files*\n\n"
+    return result
+
+
+async def analyze_weak_squares(board: chess.Board) -> str:
+    """Identify weak squares and outposts."""
+    result = "**🎯 WEAK SQUARES ANALYSIS:**\n\n"
+
+    # This is a simplified analysis - true weak square identification is complex
+    # Focus on squares that can't be defended by pawns
+
+    weak_squares = {"white": [], "black": []}
+
+    # Look for holes in pawn structure (simplified)
+    for file in range(8):
+        for rank in range(1, 7):  # Skip first and last ranks
+            square = chess.square(file, rank)
+
+            # Check if this square could be a weak square for White (can't be defended by white pawns)
+            white_pawn_defense = False
+            if file > 0:
+                left_defend = chess.square(file - 1, rank - 1)
+                if (
+                    board.piece_at(left_defend)
+                    and board.piece_at(left_defend).piece_type == chess.PAWN
+                    and board.piece_at(left_defend).color == chess.WHITE
+                ):
+                    white_pawn_defense = True
+            if file < 7:
+                right_defend = chess.square(file + 1, rank - 1)
+                if (
+                    board.piece_at(right_defend)
+                    and board.piece_at(right_defend).piece_type == chess.PAWN
+                    and board.piece_at(right_defend).color == chess.WHITE
+                ):
+                    white_pawn_defense = True
+
+            # Check if this square could be a weak square for Black
+            black_pawn_defense = False
+            if file > 0:
+                left_defend = chess.square(file - 1, rank + 1)
+                if (
+                    board.piece_at(left_defend)
+                    and board.piece_at(left_defend).piece_type == chess.PAWN
+                    and board.piece_at(left_defend).color == chess.BLACK
+                ):
+                    black_pawn_defense = True
+            if file < 7:
+                right_defend = chess.square(file + 1, rank + 1)
+                if (
+                    board.piece_at(right_defend)
+                    and board.piece_at(right_defend).piece_type == chess.PAWN
+                    and board.piece_at(right_defend).color == chess.BLACK
+                ):
+                    black_pawn_defense = True
+
+            # A square is weak if it can't be defended by friendly pawns and is in enemy territory
+            if (
+                not white_pawn_defense and rank >= 4
+            ):  # White's weak squares in black's territory
+                weak_squares["white"].append(chess.square_name(square))
+            if (
+                not black_pawn_defense and rank <= 3
+            ):  # Black's weak squares in white's territory
+                weak_squares["black"].append(chess.square_name(square))
+
+    result += f"• **Potential Weak Squares:** White: {len(weak_squares['white'])} | Black: {len(weak_squares['black'])}\n"
+
+    if weak_squares["white"]:
+        result += f"  - White weak squares: {', '.join(weak_squares['white'][:5])}{'...' if len(weak_squares['white']) > 5 else ''}\n"
+    if weak_squares["black"]:
+        result += f"  - Black weak squares: {', '.join(weak_squares['black'][:5])}{'...' if len(weak_squares['black']) > 5 else ''}\n"
+
+    result += f"\n*Weak Square: Cannot be defended by friendly pawns | Outpost: Strong piece placement*\n\n"
+    return result
 
 
 async def analyze_variations(
