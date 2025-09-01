@@ -8,7 +8,7 @@ from mcp.server.models import InitializationOptions
 from mcp.server import NotificationOptions
 from mcp.types import TextContent, Tool
 from babelfish.chess_analyzer import ChessAnalyzer
-
+from mcp_tools import MCP_TOOLS
 
 async def main():
     # Create server
@@ -18,65 +18,7 @@ async def main():
     @server.list_tools()
     async def handle_list_tools() -> list[Tool]:
         """List available chess analysis tools."""
-        return [
-            Tool(
-                name="analyze_position",
-                description="Analyze a chess position using Stockfish engine. Provides evaluation, best moves, and human-readable explanation.",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "fen": {
-                            "type": "string",
-                            "description": "The chess position in FEN (Forsyth-Edwards Notation)",
-                        },
-                        "depth": {
-                            "type": "integer",
-                            "description": "Analysis depth (default: 15, higher is more accurate but slower)",
-                            "default": 15,
-                            "minimum": 1,
-                            "maximum": 30,
-                        },
-                    },
-                    "required": ["fen"],
-                },
-            ),
-            Tool(
-                name="analyze_game",
-                description="Analyze a complete chess game move by move. Provides evaluation for each position.",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "moves": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "description": "List of moves in standard algebraic notation (e.g., ['e4', 'e5', 'Nf3'])",
-                        },
-                        "depth": {
-                            "type": "integer",
-                            "description": "Analysis depth for each position (default: 12)",
-                            "default": 12,
-                            "minimum": 1,
-                            "maximum": 20,
-                        },
-                    },
-                    "required": ["moves"],
-                },
-            ),
-            Tool(
-                name="explain_position",
-                description="Get a human-readable explanation of a chess position's evaluation and key features.",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "fen": {
-                            "type": "string",
-                            "description": "The chess position in FEN notation",
-                        }
-                    },
-                    "required": ["fen"],
-                },
-            ),
-        ]
+        return MCP_TOOLS
 
     @server.call_tool()
     async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:

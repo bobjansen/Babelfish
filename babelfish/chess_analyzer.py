@@ -39,6 +39,47 @@ class ChessAnalyzer:
         except:
             return uci_move  # Return UCI if conversion fails
 
+    def san_to_uci(self, fen: str, san_move: str) -> str:
+        """Convert Standard Algebraic Notation to UCI move format.
+
+        Args:
+            fen: The position in FEN notation
+            san_move: Move in SAN format (e.g., "Nf3")
+
+        Returns:
+            Move in UCI format (e.g., "g1f3")
+        """
+        try:
+            board = chess.Board(fen)
+            move = board.parse_san(san_move)
+            return move.uci()
+        except:
+            return san_move  # Return original if conversion fails
+
+    def convert_san_moves_to_uci(self, moves: List[str]) -> List[str]:
+        """Convert a list of SAN moves to UCI format.
+
+        Args:
+            moves: List of moves in Standard Algebraic Notation
+
+        Returns:
+            List of moves in UCI format
+        """
+        uci_moves = []
+        board = chess.Board()
+        
+        for san_move in moves:
+            try:
+                move = board.parse_san(san_move)
+                uci_moves.append(move.uci())
+                board.push(move)
+            except:
+                # If conversion fails, try to use the move as-is
+                uci_moves.append(san_move)
+                break
+                
+        return uci_moves
+
     def analyze_position(self, fen: str, depth: int = 15) -> Dict:
         """Analyze a chess position given in FEN notation.
 
@@ -98,20 +139,32 @@ class ChessAnalyzer:
             List of analysis for each position
         """
         analyses = []
-        self.stockfish.set_position(moves)
+        
+        # Convert SAN moves to UCI format for Stockfish
+        uci_moves = self.convert_san_moves_to_uci(moves)
 
         # Analyze each position in the game
         for i in range(len(moves)):
-            self.stockfish.set_position(moves[: i + 1])
-            fen = self.stockfish.get_fen_position()
-
             try:
+                # Set position up to move i
+                self.stockfish = Stockfish()  # Reset to starting position
+                if i > 0:
+                    self.stockfish.set_position(uci_moves[:i])
+                
+                # Make the current move
+                if i < len(uci_moves):
+                    self.stockfish.make_moves_from_current_position([uci_moves[i]])
+                
+                fen = self.stockfish.get_fen_position()
                 analysis = self.analyze_position(fen)
                 analysis["move_number"] = i + 1
-                analysis["move"] = moves[i]
+                analysis["move"] = moves[i]  # Keep original SAN move
                 analyses.append(analysis)
+                
             except Exception as e:
                 print(f"Error analyzing position after move {i+1}: {e}")
+                # Continue with partial results
+                break
 
         return analyses
 
