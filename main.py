@@ -20,7 +20,7 @@ def demo_analysis():
 
     # Starting position
     starting_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-    print(f"\nAnalyzing starting position:")
+    print("\nAnalyzing starting position:")
     print(f"FEN: {starting_fen}")
 
     try:

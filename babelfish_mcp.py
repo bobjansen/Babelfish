@@ -2,8 +2,6 @@
 """Babelfish MCP Server - Chess Analysis Tools."""
 
 import asyncio
-import json
-import sys
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.server.models import InitializationOptions

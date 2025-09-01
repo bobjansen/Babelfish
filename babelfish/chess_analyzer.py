@@ -2,7 +2,6 @@
 
 from stockfish import Stockfish
 from typing import Dict, List, Optional
-import json
 import chess
 import chess.pgn
 

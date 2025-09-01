@@ -2,8 +2,6 @@
 """Babelfish Chess Coach MCP Server - Comprehensive Chess Analysis for Players."""
 
 import asyncio
-import json
-import sys
 import chess
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
@@ -339,7 +337,7 @@ async def analyze_position_comprehensive(
 
         # Add strategic guidance based on position
         if phase == "Opening":
-            response += f"""
+            response += """
 
 **📚 Opening Principles:**
 • Develop pieces toward the center
@@ -348,7 +346,7 @@ async def analyze_position_comprehensive(
 • Don't move the same piece twice without reason"""
 
         elif phase == "Middlegame":
-            response += f"""
+            response += """
 
 **⚔️ Middlegame Strategy:**
 • Look for tactical opportunities (pins, forks, skewers)
@@ -357,7 +355,7 @@ async def analyze_position_comprehensive(
 • Consider pawn breaks and space advantage"""
 
         else:  # Endgame
-            response += f"""
+            response += """
 
 **🏁 Endgame Technique:**
 • Activate your king - it's a strong piece in the endgame
@@ -471,7 +469,7 @@ async def evaluate_specific_move(
 **Engine's Assessment:**"""
 
         if move == best_move:
-            response += f"\n✅ This is the engine's top choice!"
+            response += "\n✅ This is the engine's top choice!"
         else:
             response += f"\n💡 Engine prefers: **{best_move}**"
 
@@ -487,7 +485,7 @@ async def evaluate_specific_move(
                     response += f"\n• Your move: {player_cp/100:+.1f}, Best: {best_cp/100:+.1f} (difference: {diff/100:.1f})"
                     break
 
-        response += f"""
+        response += """
 
 **📚 Alternative Moves:**"""
         for i, move_info in enumerate(top_moves[:3], 1):
@@ -500,7 +498,7 @@ async def evaluate_specific_move(
 
         # Add tactical/positional feedback
         if rating in ["Bad", "Blunder"]:
-            response += f"""
+            response += """
 
 **🚨 Improvement Tips:**
 • Look for tactical motifs (pins, forks, discovered attacks)
@@ -553,16 +551,16 @@ async def find_tactical_opportunities(
             # Look for significant evaluation swings indicating tactics
             cp_value = eval_info["value"]
             if abs(cp_value) > 300:
-                response += f"\n🎯 **Major Tactical Opportunity!**"
+                response += "\n🎯 **Major Tactical Opportunity!**"
                 response += f"\nEvaluation: {cp_value/100:+.1f} pawns"
             elif abs(cp_value) > 150:
-                response += f"\n⚡ **Tactical Advantage Available**"
+                response += "\n⚡ **Tactical Advantage Available**"
                 response += f"\nEvaluation: {cp_value/100:+.1f} pawns"
             else:
-                response += f"\n🔍 **No Major Tactics Found**"
+                response += "\n🔍 **No Major Tactics Found**"
                 response += f"\nPosition is relatively balanced: {cp_value/100:+.1f}"
 
-        response += f"""
+        response += """
 
 **🎲 Key Moves to Consider:**"""
 
@@ -588,7 +586,7 @@ async def find_tactical_opportunities(
                 response += f"\n{i}. **{move}** ({cp/100:+.1f})"
 
         # Add tactical motif guidance
-        response += f"""
+        response += """
 
 **🧠 Common Tactical Motifs to Look For:**
 • **Pins**: Attack a piece that can't move without exposing a more valuable piece
@@ -599,7 +597,7 @@ async def find_tactical_opportunities(
 • **Deflection**: Force a defending piece away from its duty"""
 
         if eval_info["type"] != "mate" and abs(cp_value) < 100:
-            response += f"""
+            response += """
 
 **💡 Tactical Training Tips:**
 • Calculate concrete variations, don't just rely on intuition
@@ -648,7 +646,7 @@ async def analyze_opening_position(
         if moves_played:
             response += f"\n• Opening line: {' '.join(moves_played[:8])}{'...' if len(moves_played) > 8 else ''}"
 
-        response += f"""
+        response += """
 
 **🎯 Recommended Moves:**"""
 
@@ -659,7 +657,7 @@ async def analyze_opening_position(
 
         # Opening principles based on move number
         if move_number <= 5:
-            response += f"""
+            response += """
 
 **🏗️ Early Opening Principles (Moves 1-5):**
 • **Development**: Bring knights and bishops into active squares
@@ -668,7 +666,7 @@ async def analyze_opening_position(
 • **Avoid**: Moving the same piece twice, bringing queen out too early"""
 
         elif move_number <= 10:
-            response += f"""
+            response += """
 
 **⚔️ Opening Development (Moves 6-10):**
 • **Complete development**: Get all minor pieces active
@@ -677,7 +675,7 @@ async def analyze_opening_position(
 • **Central pawn breaks**: Look for d4/d5 or e4/e5 advances"""
 
         else:
-            response += f"""
+            response += """
 
 **🌟 Opening to Middlegame Transition:**
 • **Piece improvement**: Optimize piece placement
@@ -687,7 +685,7 @@ async def analyze_opening_position(
 
         # Add piece development analysis
         piece_analysis = analyze_piece_development(board)
-        response += f"""
+        response += """
 
 **🎭 Piece Activity Assessment:**"""
         for color, info in piece_analysis.items():
@@ -695,7 +693,7 @@ async def analyze_opening_position(
             if info["suggestions"]:
                 response += f" | Next: {', '.join(info['suggestions'])}"
 
-        response += f"""
+        response += """
 
 **💡 Strategic Tips:**
 • Control key squares with pieces, not just pawns
@@ -754,7 +752,7 @@ async def provide_endgame_guidance(
         material_balance = analyze_endgame_material(board)
 
         if "K+P vs K" in material_balance:
-            response += f"""
+            response += """
 
 **♔ King and Pawn Endgame:**
 • **Opposition**: Control key squares to restrict opponent's king
@@ -763,7 +761,7 @@ async def provide_endgame_guidance(
 • **Stalemate tricks**: Be careful not to stalemate in winning positions"""
 
         elif "K+Q vs K" in material_balance:
-            response += f"""
+            response += """
 
 **♕ Queen vs King Endgame:**
 • **Centralize your king**: Bring it up to help the queen
@@ -772,7 +770,7 @@ async def provide_endgame_guidance(
 • **Basic checkmate**: Learn the systematic mating technique"""
 
         elif "K+R vs K" in material_balance:
-            response += f"""
+            response += """
 
 **♖ Rook vs King Endgame:**
 • **Cut off the king**: Use rook to confine opponent to edge
@@ -781,7 +779,7 @@ async def provide_endgame_guidance(
 • **King activity**: Your king must participate in the mating attack"""
 
         else:
-            response += f"""
+            response += """
 
 **🎓 General Endgame Principles:**
 • **King activity**: The king becomes a fighting piece
@@ -790,7 +788,7 @@ async def provide_endgame_guidance(
 • **Calculate precisely**: Endgames reward accurate calculation"""
 
         # Add practical guidance
-        response += f"""
+        response += """
 
 **💪 Practical Tips:**
 • **Opposition**: In pawn endings, try to get the opposition
@@ -1051,7 +1049,7 @@ async def explore_candidate_moves(
                 key=lambda x: -x["eval_change"] if board.turn else x["eval_change"]
             )
 
-            response += f"""
+            response += """
 
 **📊 Summary & Recommendations:**
 
@@ -1073,7 +1071,7 @@ async def explore_candidate_moves(
 Consider exploring the engine's suggestion to see why it's preferred."""
 
             # Add learning insights
-            response += f"""
+            response += """
 
 **🧠 Chess Learning Insights:**
 • Compare evaluations to understand which moves improve your position
@@ -1250,7 +1248,7 @@ async def apply_moves_to_fen(
 • To Move: {"White" if board.turn else "Black"}"""
 
         if show_progression:
-            response += f"\n\n**📍 Move-by-Move Progression:**"
+            response += "\n\n**📍 Move-by-Move Progression:**"
 
         position_history = [starting_fen]
         current_board = board.copy()
@@ -1323,15 +1321,15 @@ async def apply_moves_to_fen(
             )  # Opposite of current turn
             game_status = f"\n• **Game Status:** CHECKMATE - {winner} wins!"
         elif current_board.is_stalemate():
-            game_status = f"\n• **Game Status:** STALEMATE - Draw"
+            game_status = "\n• **Game Status:** STALEMATE - Draw"
         elif current_board.is_check():
             game_status = f"\n• **Game Status:** {final_to_move} is in CHECK"
         elif current_board.is_insufficient_material():
-            game_status = f"\n• **Game Status:** Insufficient material - Draw"
+            game_status = "\n• **Game Status:** Insufficient material - Draw"
         elif current_board.is_seventyfive_moves():
-            game_status = f"\n• **Game Status:** 75-move rule - Draw"
+            game_status = "\n• **Game Status:** 75-move rule - Draw"
         elif current_board.is_fivefold_repetition():
-            game_status = f"\n• **Game Status:** 5-fold repetition - Draw"
+            game_status = "\n• **Game Status:** 5-fold repetition - Draw"
 
         response += f"""
 
@@ -1508,7 +1506,7 @@ async def analyze_variations(
                 response += f"\n• Final evaluation: {start_eval/100:+.1f} → {final_eval/100:+.1f} (net: {total_change/100:+.1f})"
 
                 # Show move-by-move progression
-                response += f"\n• **Move progression:**"
+                response += "\n• **Move progression:**"
                 current_display_eval = start_eval
 
                 for i, move_eval in enumerate(move_evaluations):
@@ -1536,7 +1534,7 @@ async def analyze_variations(
 
         # Add summary and comparison
         if variation_results:
-            response += f"\n\n**📊 Variation Comparison:**"
+            response += "\n\n**📊 Variation Comparison:**"
 
             # Sort by final evaluation (from current player's perspective)
             if board.turn:  # White to move - higher is better
@@ -1554,7 +1552,7 @@ async def analyze_variations(
                 response += f"\n{i}. **{var_moves}** ({var_result['final_eval']/100:+.1f}, {var_result['total_change']/100:+.1f})"
 
             # Strategic insights
-            response += f"\n\n**🧠 Strategic Insights:**"
+            response += "\n\n**🧠 Strategic Insights:**"
 
             best_var = sorted_variations[0]
             worst_var = sorted_variations[-1] if len(sorted_variations) > 1 else None
@@ -1567,10 +1565,10 @@ async def analyze_variations(
             if eval_diff > 200:
                 response += f"\n• **Major difference** between variations ({eval_diff/100:.1f} pawns) - choice is critical"
             elif eval_diff > 100:
-                response += f"\n• **Significant difference** between variations - careful evaluation needed"
+                response += "\n• **Significant difference** between variations - careful evaluation needed"
             else:
                 response += (
-                    f"\n• **Similar outcomes** - multiple good options available"
+                    "\n• **Similar outcomes** - multiple good options available"
                 )
 
             # Identify patterns
@@ -1586,17 +1584,17 @@ async def analyze_variations(
             if len(variation_results[0]["variation"]) <= 3 and all(
                 abs(var["total_change"]) < 150 for var in variation_results
             ):
-                response += f"\n• **Positional variations** - focus on development and structure"
+                response += "\n• **Positional variations** - focus on development and structure"
             elif any(abs(var["total_change"]) > 200 for var in variation_results):
                 response += (
-                    f"\n• **Tactical variations** - concrete calculation is essential"
+                    "\n• **Tactical variations** - concrete calculation is essential"
                 )
 
-        response += f"\n\n**💡 Multi-Move Analysis Benefits:**"
-        response += f"\n• See how plans develop over multiple moves"
-        response += f"\n• Compare strategic vs tactical approaches"
-        response += f"\n• Understand position transformation patterns"
-        response += f"\n• Use final FENs for deeper analysis if needed"
+        response += "\n\n**💡 Multi-Move Analysis Benefits:**"
+        response += "\n• See how plans develop over multiple moves"
+        response += "\n• Compare strategic vs tactical approaches"
+        response += "\n• Understand position transformation patterns"
+        response += "\n• Use final FENs for deeper analysis if needed"
 
         response += f"\n\n*Analyzed {len(variations)} variation(s) at depth {depth}*"
 
