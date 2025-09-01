@@ -162,3 +162,97 @@ class ChessAnalyzer:
             explanation_parts.append(f"The best move is {analysis['best_move']}.")
 
         return " ".join(explanation_parts)
+
+    def get_principal_variation(
+        self, fen: str, depth: int = 20, max_moves: int = 20
+    ) -> Dict:
+        """Get the engine's principal variation (main line) from a position.
+
+        Args:
+            fen: The starting position in FEN notation
+            depth: Analysis depth for each position
+            max_moves: Maximum number of moves to analyze in the line
+
+        Returns:
+            Dictionary containing the principal variation analysis
+        """
+        if not self.stockfish.is_fen_valid(fen):
+            raise ValueError(f"Invalid FEN: {fen}")
+
+        pv_moves = []
+        pv_analysis = []
+        current_fen = fen
+
+        try:
+            board = chess.Board(fen)
+
+            for move_num in range(max_moves):
+                # Analyze current position
+                self.stockfish.set_fen_position(current_fen)
+                self.stockfish.set_depth(depth)
+
+                evaluation = self.stockfish.get_evaluation()
+                best_move_uci = self.stockfish.get_best_move()
+
+                if not best_move_uci:
+                    # No more moves (checkmate, stalemate, or error)
+                    break
+
+                # Convert UCI to SAN
+                best_move_san = self.uci_to_san(current_fen, best_move_uci)
+
+                # Make the move on our board
+                try:
+                    chess_move = board.parse_san(best_move_san)
+                    board.push(chess_move)
+                    new_fen = board.fen()
+                except:
+                    # Move parsing failed
+                    break
+
+                # Store this move in the variation
+                move_info = {
+                    "move_number": move_num + 1,
+                    "move_san": best_move_san,
+                    "move_uci": best_move_uci,
+                    "fen_before": current_fen,
+                    "fen_after": new_fen,
+                    "evaluation": evaluation,
+                    "to_move": "White" if chess.Board(current_fen).turn else "Black",
+                }
+
+                pv_moves.append(best_move_san)
+                pv_analysis.append(move_info)
+
+                # Check for game ending conditions
+                if board.is_checkmate():
+                    move_info["result"] = "checkmate"
+                    break
+                elif board.is_stalemate():
+                    move_info["result"] = "stalemate"
+                    break
+                elif board.is_insufficient_material():
+                    move_info["result"] = "insufficient_material"
+                    break
+
+                # Move to next position
+                current_fen = new_fen
+
+                # Stop if evaluation becomes too extreme (likely found a winning/losing line)
+                if evaluation["type"] == "mate":
+                    break
+                elif evaluation["type"] == "cp" and abs(evaluation["value"]) > 2000:
+                    # Very large advantage, probably found the key line
+                    break
+
+        except Exception:
+            # Return partial results if something goes wrong
+            pass
+
+        return {
+            "starting_fen": fen,
+            "pv_moves": pv_moves,
+            "pv_analysis": pv_analysis,
+            "total_moves": len(pv_moves),
+            "analysis_depth": depth,
+        }

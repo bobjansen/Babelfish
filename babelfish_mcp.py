@@ -99,7 +99,7 @@ async def main():
                     explanation = analyzer.get_position_explanation(fen)
 
                     # Format the response nicely
-                    result = {
+                    {
                         "position": {
                             "fen": fen,
                             "evaluation": analysis["evaluation"],

@@ -22,7 +22,7 @@ async def main():
         return [
             Tool(
                 name="analyze_position",
-                description="Analyze a chess position in FEN notation. Returns engine evaluation (in centipawns or mate distance), top 3 best moves with evaluations, strategic guidance based on game phase (opening/middlegame/endgame), and human-readable position explanation. Use this for comprehensive position assessment.",
+                description="Analyze a chess position in FEN notation. Returns engine evaluation (in centipawns or mate distance), top 5 best moves with evaluations, strategic guidance based on game phase (opening/middlegame/endgame), and human-readable position explanation. ALWAYS use this tool when asked to explain or evaluate any specific move to get accurate engine assessment. Use this for comprehensive position assessment.",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -32,10 +32,10 @@ async def main():
                         },
                         "depth": {
                             "type": "integer",
-                            "description": "Analysis strength: 10=fast, 15=standard, 20=deep (default: 15)",
-                            "default": 15,
-                            "minimum": 5,
-                            "maximum": 25,
+                            "description": "Analysis strength: 15=fast, 20=standard, 25=deep (default: 20)",
+                            "default": 20,
+                            "minimum": 10,
+                            "maximum": 30,
                         },
                     },
                     "required": ["fen"],
@@ -57,10 +57,10 @@ async def main():
                         },
                         "depth": {
                             "type": "integer",
-                            "description": "Analysis depth (default: 15)",
-                            "default": 15,
-                            "minimum": 10,
-                            "maximum": 20,
+                            "description": "Analysis depth (default: 20)",
+                            "default": 20,
+                            "minimum": 15,
+                            "maximum": 25,
                         },
                     },
                     "required": ["fen", "move"],
@@ -129,14 +129,14 @@ async def main():
                             "items": {"type": "string"},
                             "description": "List of moves to try in algebraic notation (e.g., ['Nf3', 'e4', 'O-O', 'd4']). Include 3-5 candidate moves to explore.",
                             "minItems": 1,
-                            "maxItems": 8,
+                            "maxItems": 12,
                         },
                         "depth": {
                             "type": "integer",
-                            "description": "Analysis depth for each resulting position (default: 12)",
-                            "default": 12,
-                            "minimum": 8,
-                            "maximum": 18,
+                            "description": "Analysis depth for each resulting position (default: 18)",
+                            "default": 18,
+                            "minimum": 12,
+                            "maximum": 25,
                         },
                     },
                     "required": ["fen", "candidate_moves"],
@@ -159,16 +159,16 @@ async def main():
                                 "items": {"type": "string"},
                                 "description": "A sequence of moves (2-4 moves) in algebraic notation",
                             },
-                            "description": "List of move sequences to analyze (e.g., [['e4', 'e5'], ['d4', 'd5'], ['Nf3', 'Nf6', 'Bg5']]). Each variation should be 2-4 moves long.",
+                            "description": "List of move sequences to analyze (e.g., [['e4', 'e5', 'Nf3', 'Nc6'], ['d4', 'd5', 'c4', 'e6'], ['Nf3', 'Nf6', 'Bg5', 'Be7', 'e4']]). Each variation should be 3-6 moves long.",
                             "minItems": 1,
-                            "maxItems": 6,
+                            "maxItems": 10,
                         },
                         "depth": {
                             "type": "integer",
-                            "description": "Analysis depth for final positions (default: 15)",
-                            "default": 15,
-                            "minimum": 10,
-                            "maximum": 20,
+                            "description": "Analysis depth for final positions (default: 20)",
+                            "default": 20,
+                            "minimum": 15,
+                            "maximum": 25,
                         },
                     },
                     "required": ["fen", "variations"],
@@ -189,7 +189,7 @@ async def main():
                             "items": {"type": "string"},
                             "description": "List of moves to apply in standard algebraic notation (e.g., ['e4', 'e5', 'Nf3', 'Nc6']). Each move will be validated and applied sequentially.",
                             "minItems": 1,
-                            "maxItems": 20,
+                            "maxItems": 30,
                         },
                         "show_progression": {
                             "type": "boolean",
@@ -201,8 +201,36 @@ async def main():
                 },
             ),
             Tool(
+                name="show_engine_line",
+                description="Show the engine's main line (principal variation) for deep strategic understanding. Reveals the engine's complete winning plan or best continuation up to 20+ moves deep, showing how the position should be played step-by-step. Essential for understanding long-term plans, endgame technique, tactical sequences, and strategic concepts. Use this when you need to understand the ENGINE'S COMPLETE PLAN rather than just the next best move.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "fen": {
+                            "type": "string",
+                            "description": "The chess position in FEN notation",
+                        },
+                        "depth": {
+                            "type": "integer",
+                            "description": "Analysis depth for the main line (default: 22, higher shows longer plans)",
+                            "default": 22,
+                            "minimum": 15,
+                            "maximum": 30,
+                        },
+                        "moves": {
+                            "type": "integer",
+                            "description": "Maximum number of moves to show in the main line (default: 20)",
+                            "default": 20,
+                            "minimum": 10,
+                            "maximum": 40,
+                        },
+                    },
+                    "required": ["fen"],
+                },
+            ),
+            Tool(
                 name="list_legal_moves",
-                description="Generate a complete list of all legal moves in a chess position. Takes a FEN and returns all possible moves in standard algebraic notation, categorized by move type (captures, checks, castling, en passant, promotions, quiet moves). Essential for understanding what moves are actually possible before suggesting or analyzing moves. Use this when you need to know all available options in a position.",
+                description="ESSENTIAL VERIFICATION TOOL: Generate a complete list of all legal moves in a chess position. ALWAYS use this tool before discussing or analyzing specific moves to prevent move hallucinations. Chess move legality is complex (blocked squares, pins, checks, castling rights) and cannot be reliably determined without this tool. Returns all possible moves in standard algebraic notation, categorized by move type. Critical for accuracy when explaining or evaluating any move.",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -241,6 +269,8 @@ async def main():
                 return await analyze_variations(arguments, analyzer)
             elif name == "apply_moves":
                 return await apply_moves_to_fen(arguments, analyzer)
+            elif name == "show_engine_line":
+                return await show_engine_main_line(arguments, analyzer)
             elif name == "list_legal_moves":
                 return await list_legal_moves(arguments, analyzer)
             else:
@@ -270,7 +300,7 @@ async def analyze_position_comprehensive(
 ) -> list[TextContent]:
     """Provide comprehensive position analysis for chess players."""
     fen = arguments.get("fen")
-    depth = arguments.get("depth", 15)
+    depth = arguments.get("depth", 20)
 
     if not fen:
         return [TextContent(type="text", text="❌ Please provide a FEN position")]
@@ -377,7 +407,7 @@ async def evaluate_specific_move(
     """Evaluate a specific move and provide feedback."""
     fen = arguments.get("fen")
     move = arguments.get("move")
-    depth = arguments.get("depth", 15)
+    depth = arguments.get("depth", 20)
 
     if not fen or not move:
         return [
@@ -488,7 +518,7 @@ async def evaluate_specific_move(
         response += """
 
 **📚 Alternative Moves:**"""
-        for i, move_info in enumerate(top_moves[:3], 1):
+        for i, move_info in enumerate(top_moves[:5], 1):
             alt_move = move_info["Move"]
             cp = move_info.get("Centipawn", 0)
             if alt_move == move:
@@ -525,7 +555,7 @@ async def find_tactical_opportunities(
 
     try:
         # Analyze with high depth for tactics
-        analysis = analyzer.analyze_position(fen, depth=18)
+        analysis = analyzer.analyze_position(fen, depth=22)
 
         board = chess.Board(fen)
         to_move = "White" if board.turn else "Black"
@@ -622,7 +652,7 @@ async def analyze_opening_position(
         return [TextContent(type="text", text="❌ Please provide a FEN position")]
 
     try:
-        analysis = analyzer.analyze_position(fen, depth=12)
+        analysis = analyzer.analyze_position(fen, depth=18)
 
         board = chess.Board(fen)
         move_number = board.fullmove_number
@@ -718,7 +748,7 @@ async def provide_endgame_guidance(
 
     try:
         analysis = analyzer.analyze_position(
-            fen, depth=20
+            fen, depth=25
         )  # Deep analysis for endgames
 
         board = chess.Board(fen)
@@ -890,7 +920,7 @@ async def explore_candidate_moves(
     """Explore multiple candidate moves and their resulting positions."""
     fen = arguments.get("fen")
     candidate_moves = arguments.get("candidate_moves", [])
-    depth = arguments.get("depth", 12)
+    depth = arguments.get("depth", 18)
 
     if not fen:
         return [TextContent(type="text", text="❌ Please provide a FEN position")]
@@ -1055,7 +1085,7 @@ async def explore_candidate_moves(
 
 **Best Moves (by engine evaluation):**"""
 
-            for i, move_info in enumerate(move_results[:3], 1):
+            for i, move_info in enumerate(move_results[:5], 1):
                 response += f"\n{i}. **{move_info['move']}** ({move_info['eval_change']/100:+.1f})"
 
             # Compare with engine's original suggestion
@@ -1166,7 +1196,9 @@ async def list_legal_moves(
                 else:
                     categories["quiet_moves"].append(san_move)
 
-            response = f"""📋 **Legal Moves Analysis ({to_move} to move)**
+            response = f"""📋 **VERIFIED LEGAL MOVES ({to_move} to move)**
+
+⚠️ **CRITICAL:** These are the ONLY legal moves in this position. Any other moves mentioned are invalid.
 
 **Position:** {fen}
 **Total Legal Moves:** {len(san_moves)}
@@ -1341,7 +1373,7 @@ async def apply_moves_to_fen(
 
         # Add some quick analysis of the final position
         try:
-            quick_analysis = analyzer.analyze_position(final_fen, depth=10)
+            quick_analysis = analyzer.analyze_position(final_fen, depth=15)
             eval_info = quick_analysis["evaluation"]
 
             if eval_info["type"] == "cp":
@@ -1365,13 +1397,193 @@ async def apply_moves_to_fen(
         return [TextContent(type="text", text=f"❌ Move application error: {str(e)}")]
 
 
+async def show_engine_main_line(
+    arguments: dict, analyzer: ChessAnalyzer
+) -> list[TextContent]:
+    """Show the engine's principal variation for deep strategic understanding."""
+    fen = arguments.get("fen")
+    depth = arguments.get("depth", 22)
+    max_moves = arguments.get("moves", 20)
+
+    if not fen:
+        return [TextContent(type="text", text="❌ Please provide a FEN position")]
+
+    try:
+        # Get the principal variation
+        pv_data = analyzer.get_principal_variation(fen, depth, max_moves)
+
+        if not pv_data["pv_moves"]:
+            return [
+                TextContent(
+                    type="text",
+                    text="❌ Could not generate principal variation - position may be terminal",
+                )
+            ]
+
+        board = chess.Board(fen)
+        to_move = "White" if board.turn else "Black"
+
+        # Start building the response
+        response = f"""🎯 **ENGINE'S MASTER PLAN**
+
+**Starting Position ({to_move} to move):**
+• FEN: `{fen}`
+• Analysis Depth: {depth}
+
+**🧠 Engine's Principal Variation ({len(pv_data['pv_moves'])} moves):**
+{' '.join(pv_data['pv_moves'])}
+
+**📋 Step-by-Step Breakdown:**"""
+
+        current_move_num = 1
+        white_move = board.turn  # True if White starts the sequence
+
+        for i, move_data in enumerate(pv_data["pv_analysis"]):
+            move = move_data["move_san"]
+            eval_info = move_data["evaluation"]
+            to_move_player = move_data["to_move"]
+
+            # Format evaluation
+            if eval_info["type"] == "cp":
+                eval_text = f"{eval_info['value']/100:+.1f}"
+            elif eval_info["type"] == "mate":
+                moves_to_mate = eval_info["value"]
+                side = "White" if moves_to_mate > 0 else "Black"
+                eval_text = f"Mate in {abs(moves_to_mate)} for {side}"
+            else:
+                eval_text = "Unknown"
+
+            # Determine move numbering
+            if white_move:
+                if to_move_player == "White":
+                    move_display = f"{current_move_num}. {move}"
+                else:
+                    move_display = f"{current_move_num}...{move}"
+                    current_move_num += 1
+                white_move = not white_move
+            else:
+                if to_move_player == "Black":
+                    move_display = f"{current_move_num}...{move}"
+                    current_move_num += 1
+                else:
+                    move_display = f"{current_move_num}. {move}"
+                white_move = not white_move
+
+            response += f"\n**{move_display}** ({eval_text})"
+
+            # Add special annotations
+            if "result" in move_data:
+                if move_data["result"] == "checkmate":
+                    response += " CHECKMATE!"
+                elif move_data["result"] == "stalemate":
+                    response += " (Stalemate)"
+
+            # Every few moves, add strategic commentary
+            if (i + 1) % 5 == 0 or (i + 1) == len(pv_data["pv_analysis"]):
+                # Analyze the position for strategic insights
+                current_board = chess.Board(move_data["fen_after"])
+                piece_count = len([p for p in current_board.piece_map().values()])
+
+                if piece_count <= 10:
+                    phase = "endgame"
+                elif piece_count <= 20:
+                    phase = "middlegame"
+                else:
+                    phase = "opening"
+
+                response += (
+                    f"\n  *After {i+1} moves: {phase} position, evaluation {eval_text}*"
+                )
+
+        # Add strategic analysis of the complete plan
+        starting_eval = (
+            pv_data["pv_analysis"][0]["evaluation"]["value"]
+            if pv_data["pv_analysis"]
+            else 0
+        )
+        final_eval = (
+            pv_data["pv_analysis"][-1]["evaluation"]["value"]
+            if pv_data["pv_analysis"]
+            else 0
+        )
+
+        if pv_data["pv_analysis"]:
+            eval_change = final_eval - starting_eval
+
+            response += f"""
+
+**📈 Strategic Assessment:**
+• **Evaluation Progression:** {starting_eval/100:+.1f} → {final_eval/100:+.1f} pawns
+• **Net Change:** {eval_change/100:+.1f} pawns over {len(pv_data['pv_moves'])} moves
+• **Plan Success:** {"Improvement" if abs(eval_change) > 50 else "Maintaining position"}"""
+
+            # Analyze the nature of the plan
+            captures = sum(1 for move in pv_data["pv_moves"] if "x" in move)
+            checks = sum(1 for move in pv_data["pv_moves"] if "+" in move)
+            king_moves = sum(1 for move in pv_data["pv_moves"] if move.startswith("K"))
+            pawn_moves = sum(
+                1
+                for move in pv_data["pv_moves"]
+                if move[0].islower() or move[0] in "abcdefgh"
+            )
+
+            response += """
+
+**🎮 Plan Characteristics:**"""
+
+            if king_moves >= len(pv_data["pv_moves"]) * 0.4:
+                response += f"\n• **King Activity Plan** ({king_moves} king moves) - Active king endgame technique"
+
+            if captures > 0:
+                response += f"\n• **Tactical Elements** ({captures} captures) - Concrete material gain"
+
+            if pawn_moves >= len(pv_data["pv_moves"]) * 0.3:
+                response += f"\n• **Pawn Structure Focus** ({pawn_moves} pawn moves) - Pawn breaks and advancement"
+
+            if checks > 0:
+                response += f"\n• **Forcing Sequence** ({checks} checks) - Direct attacking play"
+
+            # Identify key strategic themes
+            final_board = chess.Board(pv_data["pv_analysis"][-1]["fen_after"])
+            if len([p for p in final_board.piece_map().values()]) <= 8:
+                response += "\n• **Endgame Technique** - Precise endgame execution"
+
+            if abs(final_eval) > abs(starting_eval) + 100:
+                response += (
+                    "\n• **Winning Technique** - Converting advantage to victory"
+                )
+
+            # Add educational value
+            response += f"""
+
+**💡 Learning Value:**
+• See how the engine plans {len(pv_data['pv_moves'])} moves ahead
+• Understand step-by-step strategic execution
+• Learn from optimal move sequences in this position type
+• Use this line as a reference for similar positions"""
+
+        response += f"""
+
+**🔄 Next Steps:**
+• Study individual moves with `evaluate_move` tool
+• Analyze alternative lines with `analyze_variations` tool  
+• Use final position for continued analysis: `{pv_data["pv_analysis"][-1]["fen_after"] if pv_data["pv_analysis"] else fen}`"""
+
+        return [TextContent(type="text", text=response)]
+
+    except Exception as e:
+        return [
+            TextContent(type="text", text=f"❌ Principal variation error: {str(e)}")
+        ]
+
+
 async def analyze_variations(
     arguments: dict, analyzer: ChessAnalyzer
 ) -> list[TextContent]:
     """Analyze multiple-move sequences (variations) from a position."""
     fen = arguments.get("fen")
     variations = arguments.get("variations", [])
-    depth = arguments.get("depth", 15)
+    depth = arguments.get("depth", 20)
 
     if not fen:
         return [TextContent(type="text", text="❌ Please provide a FEN position")]
@@ -1404,13 +1616,13 @@ async def analyze_variations(
         variation_results = []
 
         for var_idx, variation in enumerate(variations, 1):
-            if not variation or len(variation) < 2:
-                response += f"\n\n**Variation {var_idx}: {' '.join(variation) if variation else 'Empty'}**\n❌ Each variation must have at least 2 moves"
+            if not variation or len(variation) < 3:
+                response += f"\n\n**Variation {var_idx}: {' '.join(variation) if variation else 'Empty'}**\n❌ Each variation must have at least 3 moves"
                 continue
 
-            if len(variation) > 4:
-                response += f"\n\n**Variation {var_idx}: {' '.join(variation[:4])}...** \n⚠️ Only analyzing first 4 moves"
-                variation = variation[:4]
+            if len(variation) > 6:
+                response += f"\n\n**Variation {var_idx}: {' '.join(variation[:6])}...** \n⚠️ Only analyzing first 6 moves"
+                variation = variation[:6]
 
             try:
                 # Play out the variation move by move
@@ -1547,7 +1759,7 @@ async def analyze_variations(
                 )
 
             response += f"\n\n**Best to Worst (for {to_move}):**"
-            for i, var_result in enumerate(sorted_variations, 1):
+            for i, var_result in enumerate(sorted_variations[:8], 1):
                 var_moves = " ".join(var_result["variation"])
                 response += f"\n{i}. **{var_moves}** ({var_result['final_eval']/100:+.1f}, {var_result['total_change']/100:+.1f})"
 
@@ -1567,9 +1779,7 @@ async def analyze_variations(
             elif eval_diff > 100:
                 response += "\n• **Significant difference** between variations - careful evaluation needed"
             else:
-                response += (
-                    "\n• **Similar outcomes** - multiple good options available"
-                )
+                response += "\n• **Similar outcomes** - multiple good options available"
 
             # Identify patterns
             forcing_variations = sum(
@@ -1584,7 +1794,9 @@ async def analyze_variations(
             if len(variation_results[0]["variation"]) <= 3 and all(
                 abs(var["total_change"]) < 150 for var in variation_results
             ):
-                response += "\n• **Positional variations** - focus on development and structure"
+                response += (
+                    "\n• **Positional variations** - focus on development and structure"
+                )
             elif any(abs(var["total_change"]) > 200 for var in variation_results):
                 response += (
                     "\n• **Tactical variations** - concrete calculation is essential"
