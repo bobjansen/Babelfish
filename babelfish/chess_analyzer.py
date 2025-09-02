@@ -20,8 +20,8 @@ class ChessAnalyzer:
         """
         # Calculate optimal thread count: floor(2/3 * num_cores)
         num_cores = os.cpu_count() or 1
-        optimal_threads = max(1, math.floor((2/3) * num_cores))
-        
+        optimal_threads = max(1, math.floor((2 / 3) * num_cores))
+
         # Configure Stockfish with optimal settings for performance
         stockfish_params = {
             "Threads": optimal_threads,
@@ -29,21 +29,23 @@ class ChessAnalyzer:
             "Move Overhead": 10,  # Reduce time overhead for faster analysis
             "Minimum Thinking Time": 10,  # Minimum time per move in ms
         }
-        
+
         if stockfish_path:
             self.stockfish = Stockfish(path=stockfish_path, parameters=stockfish_params)
         else:
             self.stockfish = Stockfish(parameters=stockfish_params)
-            
+
         if verbose:
-            hash_mb = stockfish_params["Hash"] 
-            print(f"🐟 Stockfish configured: {optimal_threads} threads, {hash_mb}MB hash (system: {num_cores} cores)")
-        
+            hash_mb = stockfish_params["Hash"]
+            print(
+                f"🐟 Stockfish configured: {optimal_threads} threads, {hash_mb}MB hash (system: {num_cores} cores)"
+            )
+
         # Store configuration for reference
         self.config = {
             "threads": optimal_threads,
             "hash_mb": stockfish_params["Hash"],
-            "total_cores": num_cores
+            "total_cores": num_cores,
         }
 
     def uci_to_san(self, fen: str, uci_move: str) -> str:
@@ -94,7 +96,7 @@ class ChessAnalyzer:
         """
         uci_moves = []
         board = chess.Board()
-        
+
         for san_move in moves:
             try:
                 move = board.parse_san(san_move)
@@ -104,7 +106,7 @@ class ChessAnalyzer:
                 # If conversion fails, try to use the move as-is
                 uci_moves.append(san_move)
                 break
-                
+
         return uci_moves
 
     def analyze_position(self, fen: str, depth: int = 15) -> Dict:
@@ -166,7 +168,7 @@ class ChessAnalyzer:
             List of analysis for each position
         """
         analyses = []
-        
+
         # Convert SAN moves to UCI format for Stockfish
         uci_moves = self.convert_san_moves_to_uci(moves)
 
@@ -177,17 +179,17 @@ class ChessAnalyzer:
                 self.stockfish = Stockfish()  # Reset to starting position
                 if i > 0:
                     self.stockfish.set_position(uci_moves[:i])
-                
+
                 # Make the current move
                 if i < len(uci_moves):
                     self.stockfish.make_moves_from_current_position([uci_moves[i]])
-                
+
                 fen = self.stockfish.get_fen_position()
                 analysis = self.analyze_position(fen)
                 analysis["move_number"] = i + 1
                 analysis["move"] = moves[i]  # Keep original SAN move
                 analyses.append(analysis)
-                
+
             except Exception as e:
                 print(f"Error analyzing position after move {i+1}: {e}")
                 # Continue with partial results

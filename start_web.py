@@ -10,22 +10,24 @@ from web_interface import app
 def main():
     """Start the Babelfish web interface."""
 
-    parser = argparse.ArgumentParser(description="Babelfish Chess Analysis Web Interface")
+    parser = argparse.ArgumentParser(
+        description="Babelfish Chess Analysis Web Interface"
+    )
     parser.add_argument(
         "--model",
         default="anthropic/claude-3.5-sonnet",
-        help="OpenRouter model to use (default: anthropic/claude-3.5-sonnet)"
+        help="OpenRouter model to use (default: anthropic/claude-3.5-sonnet)",
     )
     parser.add_argument(
         "--port",
         type=int,
         default=5000,
-        help="Port to run the web server on (default: 5000)"
+        help="Port to run the web server on (default: 5000)",
     )
     parser.add_argument(
         "--host",
         default="0.0.0.0",
-        help="Host to bind the web server to (default: 0.0.0.0)"
+        help="Host to bind the web server to (default: 0.0.0.0)",
     )
 
     args = parser.parse_args()
@@ -45,9 +47,15 @@ def main():
         print("3. Run this script again")
         print()
         print("Usage examples:")
-        print("  python start_web.py                                    # Default model")
-        print("  python start_web.py --model anthropic/claude-3-haiku   # Different model")
-        print("  python start_web.py --port 8080                        # Different port")
+        print(
+            "  python start_web.py                                    # Default model"
+        )
+        print(
+            "  python start_web.py --model anthropic/claude-3-haiku   # Different model"
+        )
+        print(
+            "  python start_web.py --port 8080                        # Different port"
+        )
         return 1
 
     print(f"🔑 Using API key: {api_key[:12]}...")
@@ -66,7 +74,7 @@ def main():
     print()
 
     # Set model for the web interface
-    app.config['MODEL'] = args.model
+    app.config["MODEL"] = args.model
 
     try:
         app.run(debug=False, port=args.port, host=args.host)

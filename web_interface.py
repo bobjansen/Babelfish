@@ -284,8 +284,8 @@ def analyze():
         )
 
     # Get model from config (default to claude-3.5-sonnet if not set)
-    model = app.config.get('MODEL', 'anthropic/claude-3.5-sonnet')
-    
+    model = app.config.get("MODEL", "anthropic/claude-3.5-sonnet")
+
     # Perform analysis
     analyzer = WebChessAnalyzer(api_key, model)
     result = analyzer.analyze_position(fen, question)

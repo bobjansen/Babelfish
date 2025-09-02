@@ -16,3 +16,6 @@ dependencies = [
 
 [tool.uv.sources]
 mcpnp = { git = "https://github.com/bobjansen/mcpnp.git" }
+
+[tool.ruff]
+lint.ignore = ["E722"]

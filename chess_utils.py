@@ -2,7 +2,7 @@
 """Shared chess utilities for board visualization and common functions."""
 
 import chess
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from mcp.types import TextContent
 
 
@@ -110,7 +110,6 @@ def get_position_info(fen: str) -> Dict[str, Any]:
     """
     try:
         board = chess.Board(fen)
-        fen_parts = fen.split()
 
         # Parse castling rights
         castling_rights = []

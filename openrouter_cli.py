@@ -516,14 +516,14 @@ class BabelfishMCPCLI:
             except requests.exceptions.HTTPError as e:
                 if e.response.status_code == 429:
                     console.print(
-                        f"[yellow]⚠️  Rate limit exceeded. Please wait a moment before trying again.[/yellow]"
+                        "[yellow]⚠️  Rate limit exceeded. Please wait a moment before trying again.[/yellow]"
                     )
                     console.print(
-                        f"[dim]You may have hit OpenRouter's rate limits. Consider using a different model or waiting a few minutes.[/dim]"
+                        "[dim]You may have hit OpenRouter's rate limits. Consider using a different model or waiting a few minutes.[/dim]"
                     )
                 elif e.response.status_code == 401:
                     console.print(
-                        f"[red]❌ Authentication failed. Please check your OpenRouter API key.[/red]"
+                        "[red]❌ Authentication failed. Please check your OpenRouter API key.[/red]"
                     )
                 elif e.response.status_code >= 500:
                     console.print(

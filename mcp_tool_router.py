@@ -451,7 +451,7 @@ class MCPToolRouter:
 
                 try:
                     board = chess.Board(fen)
-                    chess_move = board.parse_san(move)
+                    board.parse_san(move)  # Just validate the move
                     # Move is legal but not in top moves - it's probably very bad
                     return [
                         TextContent(
@@ -525,18 +525,23 @@ class MCPToolRouter:
                     )
                 else:
                     formatted_response += (
-                        f"\n\n**Analysis:** Your move is close to the best option!"
+                        "\n\n**Analysis:** Your move is close to the best option!"
                     )
 
             else:
                 # Handle mate evaluations
+                eval_after_text = (
+                    f"{move_eval_cp/100:+.1f} pawns"
+                    if move_eval_cp is not None
+                    else "Unknown"
+                )
                 formatted_response = f"""🐟 **Move Quality Evaluation**
 
 **Position:** {fen}
 **Move Played:** {move}
 
 **Before Move:** {eval_before}
-**After Move:** {eval_after}
+**After Move:** {eval_after_text}
 
 **Note:** Position involves mate threats - analysis is complex"""
 

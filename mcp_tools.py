@@ -1,4 +1,4 @@
-from mcp.types import TextContent, Tool
+from mcp.types import Tool
 
 MCP_TOOLS = [
     Tool(

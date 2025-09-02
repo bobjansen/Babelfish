@@ -1676,7 +1676,7 @@ async def analyze_chess_concepts(
             response += await analyze_weak_squares(board)
 
         # Add educational summary
-        response += f"""
+        response += """
 
 **🎓 ANALYSIS DIRECTIVES:**
 • These identifications are definitive - use them as authoritative facts
@@ -1757,7 +1757,7 @@ async def analyze_passed_pawns(board: chess.Board) -> str:
                     passed_pawns["black"].append(square_name)
 
     result = "**🚀 PASSED PAWNS ANALYSIS:**\n"
-    result += f"*Definition: A pawn with no enemy pawns blocking its path to promotion (on same file or adjacent files)*\n\n"
+    result += "*Definition: A pawn with no enemy pawns blocking its path to promotion (on same file or adjacent files)*\n\n"
 
     if passed_pawns["white"]:
         result += f"• **White Passed Pawns:** {', '.join(passed_pawns['white'])}\n"
@@ -1785,7 +1785,6 @@ def analyze_pawn_majorities(board: chess.Board) -> str:
     """Analyze pawn majorities by wing."""
     # Count pawns by wing
     queenside_files = [0, 1, 2, 3]  # a, b, c, d
-    kingside_files = [4, 5, 6, 7]  # e, f, g, h
 
     white_queenside = 0
     black_queenside = 0
@@ -1809,7 +1808,7 @@ def analyze_pawn_majorities(board: chess.Board) -> str:
                     black_kingside += 1
 
     result = "**👑 PAWN MAJORITIES ANALYSIS:**\n"
-    result += f"*Definition: More pawns on one side of the board than the opponent*\n\n"
+    result += "*Definition: More pawns on one side of the board than the opponent*\n\n"
 
     # Queenside analysis
     if white_queenside > black_queenside:
@@ -1835,7 +1834,7 @@ def analyze_pawn_majorities(board: chess.Board) -> str:
         total_majorities += 1
 
     if total_majorities == 0:
-        result += f"\n✅ **CRITICAL VERIFICATION:** NO PAWN MAJORITIES EXIST - Claims about pawn majorities in this position are INCORRECT\n"
+        result += "\n✅ **CRITICAL VERIFICATION:** NO PAWN MAJORITIES EXIST - Claims about pawn majorities in this position are INCORRECT\n"
     else:
         result += (
             f"\n📊 **Summary:** {total_majorities} pawn majority/majorities exist\n"
@@ -1851,7 +1850,6 @@ async def analyze_pawn_structure(board: chess.Board) -> str:
     # Find isolated, doubled, and backward pawns
     isolated_pawns = {"white": [], "black": []}
     doubled_pawns = {"white": [], "black": []}
-    pawn_chains = {"white": [], "black": []}
 
     # Count pawns by file for each color
     white_pawns_by_file = {f: [] for f in range(8)}
@@ -1903,7 +1901,7 @@ async def analyze_pawn_structure(board: chess.Board) -> str:
     result += f"• **Doubled Pawns:** White: {', '.join(doubled_pawns['white']) if doubled_pawns['white'] else 'None'} | Black: {', '.join(doubled_pawns['black']) if doubled_pawns['black'] else 'None'}\n"
     result += f"• **Isolated Pawns:** White: {', '.join(isolated_pawns['white']) if isolated_pawns['white'] else 'None'} | Black: {', '.join(isolated_pawns['black']) if isolated_pawns['black'] else 'None'}\n"
 
-    result += f"\n*Doubled: Multiple pawns on same file | Isolated: No friendly pawns on adjacent files*\n\n"
+    result += "\n*Doubled: Multiple pawns on same file | Isolated: No friendly pawns on adjacent files*\n\n"
     return result
 
 
@@ -1971,7 +1969,7 @@ async def analyze_piece_activity(board: chess.Board) -> str:
             black_developed = developed
 
     result += f"• **Development:** White: {white_developed}/4 pieces | Black: {black_developed}/4 pieces\n"
-    result += f"*Development: Knights and bishops moved from starting squares*\n\n"
+    result += "*Development: Knights and bishops moved from starting squares*\n\n"
 
     return result
 
@@ -2031,7 +2029,7 @@ async def analyze_king_safety(board: chess.Board) -> str:
         result += f"  - Pawn Shield: {pawn_shield}/3 pawns\n"
         result += f"  - Exposed: {'Yes' if exposed else 'No'}\n"
 
-    result += f"\n*Pawn Shield: Friendly pawns protecting king | Exposed: King in center files*\n\n"
+    result += "\n*Pawn Shield: Friendly pawns protecting king | Exposed: King in center files*\n\n"
     return result
 
 
@@ -2104,7 +2102,7 @@ async def analyze_weak_squares(board: chess.Board) -> str:
     if weak_squares["black"]:
         result += f"  - Black weak squares: {', '.join(weak_squares['black'][:5])}{'...' if len(weak_squares['black']) > 5 else ''}\n"
 
-    result += f"\n*Weak Square: Cannot be defended by friendly pawns | Outpost: Strong piece placement*\n\n"
+    result += "\n*Weak Square: Cannot be defended by friendly pawns | Outpost: Strong piece placement*\n\n"
     return result
 
 
