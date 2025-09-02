@@ -4,20 +4,47 @@ from stockfish import Stockfish
 from typing import Dict, List, Optional
 import chess
 import chess.pgn
+import os
+import math
 
 
 class ChessAnalyzer:
     """Chess analyzer that provides context-rich analysis using Stockfish."""
 
-    def __init__(self, stockfish_path: Optional[str] = None):
+    def __init__(self, stockfish_path: Optional[str] = None, verbose: bool = False):
         """Initialize the chess analyzer.
 
         Args:
             stockfish_path: Path to stockfish binary. If None, uses system stockfish.
+            verbose: Whether to print configuration details.
         """
-        self.stockfish = (
-            Stockfish(path=stockfish_path) if stockfish_path else Stockfish()
-        )
+        # Calculate optimal thread count: floor(2/3 * num_cores)
+        num_cores = os.cpu_count() or 1
+        optimal_threads = max(1, math.floor((2/3) * num_cores))
+        
+        # Configure Stockfish with optimal settings for performance
+        stockfish_params = {
+            "Threads": optimal_threads,
+            "Hash": min(1024, 64 * optimal_threads),  # 64MB per thread, max 1GB
+            "Move Overhead": 10,  # Reduce time overhead for faster analysis
+            "Minimum Thinking Time": 10,  # Minimum time per move in ms
+        }
+        
+        if stockfish_path:
+            self.stockfish = Stockfish(path=stockfish_path, parameters=stockfish_params)
+        else:
+            self.stockfish = Stockfish(parameters=stockfish_params)
+            
+        if verbose:
+            hash_mb = stockfish_params["Hash"] 
+            print(f"🐟 Stockfish configured: {optimal_threads} threads, {hash_mb}MB hash (system: {num_cores} cores)")
+        
+        # Store configuration for reference
+        self.config = {
+            "threads": optimal_threads,
+            "hash_mb": stockfish_params["Hash"],
+            "total_cores": num_cores
+        }
 
     def uci_to_san(self, fen: str, uci_move: str) -> str:
         """Convert UCI move to Standard Algebraic Notation.

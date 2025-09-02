@@ -190,7 +190,7 @@ TOOL USAGE PRINCIPLES:
 4. Use multiple tools in sequence for comprehensive analysis
 5. Don't just describe - SHOW with board visualizations and concrete analysis
 
-Your goal is to be the most helpful chess coach possible by leveraging these analysis tools extensively. Users learn better when you show them the actual positions and concrete analysis rather than abstract advice."""
+Your goal is to be the most helpful chess coach possible by leveraging these analysis tools extensively. Users learn better when you show them the actual positions and concrete analysis rather than abstract advice.""",
             }
         ]
         self.tool_call_count = 0
@@ -559,26 +559,28 @@ class BabelfishMCPCLI:
 
     def _show_tools(self):
         """Show available MCP tools with chess-specific guidance."""
-        console.print(Panel(
-            "[bold cyan]🐟 Chess Analysis Tools[/bold cyan]\n\n"
-            "Your AI coach uses these tools to provide expert analysis:\n\n"
-            "[bold yellow]Essential Tools:[/bold yellow]\n"
-            "• [cyan]analyze_position[/cyan] - Deep analysis of any position (provide FEN)\n"
-            "• [cyan]visualize_board[/cyan] - Show the board layout clearly\n"
-            "• [cyan]suggest_move[/cyan] - Get the best move recommendations\n\n"
-            "[bold yellow]Advanced Analysis:[/bold yellow]\n"
-            "• [cyan]evaluate_move_quality[/cyan] - Was that move good/bad/blunder?\n"
-            "• [cyan]find_tactical_motifs[/cyan] - Spot pins, forks, skewers\n"
-            "• [cyan]get_principal_variation[/cyan] - See the best continuation\n"
-            "• [cyan]analyze_endgame[/cyan] - Specialized endgame analysis\n"
-            "• [cyan]analyze_game[/cyan] - Full game move-by-move analysis\n\n"
-            "[bold green]💡 Pro Tips:[/bold green]\n"
-            "- Just provide a FEN position and ask questions!\n"
-            "- The AI will automatically use the right tools\n"
-            "- Try: 'Analyze this position: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'\n"
-            "- Or: 'What's the best move in this position?'",
-            title="🔧 Available Chess Tools"
-        ))
+        console.print(
+            Panel(
+                "[bold cyan]🐟 Chess Analysis Tools[/bold cyan]\n\n"
+                "Your AI coach uses these tools to provide expert analysis:\n\n"
+                "[bold yellow]Essential Tools:[/bold yellow]\n"
+                "• [cyan]analyze_position[/cyan] - Deep analysis of any position (provide FEN)\n"
+                "• [cyan]visualize_board[/cyan] - Show the board layout clearly\n"
+                "• [cyan]suggest_move[/cyan] - Get the best move recommendations\n\n"
+                "[bold yellow]Advanced Analysis:[/bold yellow]\n"
+                "• [cyan]evaluate_move_quality[/cyan] - Was that move good/bad/blunder?\n"
+                "• [cyan]find_tactical_motifs[/cyan] - Spot pins, forks, skewers\n"
+                "• [cyan]get_principal_variation[/cyan] - See the best continuation\n"
+                "• [cyan]analyze_endgame[/cyan] - Specialized endgame analysis\n"
+                "• [cyan]analyze_game[/cyan] - Full game move-by-move analysis\n\n"
+                "[bold green]💡 Pro Tips:[/bold green]\n"
+                "- Just provide a FEN position and ask questions!\n"
+                "- The AI will automatically use the right tools\n"
+                "- Try: 'Analyze this position: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'\n"
+                "- Or: 'What's the best move in this position?'",
+                title="🔧 Available Chess Tools",
+            )
+        )
 
     def _show_history(self):
         """Show conversation history."""

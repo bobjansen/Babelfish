@@ -2114,7 +2114,7 @@ async def visualize_board_position(
     """Visualize a chess position in clear, human-readable format using shared implementation."""
     # Import the shared implementation
     from chess_utils import visualize_board_mcp_tool
-    
+
     # Use the shared implementation directly
     return visualize_board_mcp_tool(arguments)
 

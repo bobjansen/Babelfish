@@ -31,7 +31,9 @@ class MCPToolRouter:
     def __init__(self, chess_analyzer: ChessAnalyzer = None):
         if chess_analyzer is None:
             # Import here to avoid circular imports and initialize if not provided
-            chess_analyzer = ChessAnalyzer()
+            chess_analyzer = ChessAnalyzer(
+                verbose=True
+            )  # Show configuration in verbose mode
 
         self.chess_analyzer = chess_analyzer
         self.tools: Dict[str, Callable] = {}
