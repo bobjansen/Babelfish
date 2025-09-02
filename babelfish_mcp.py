@@ -10,6 +10,7 @@ from mcp.types import TextContent, Tool
 from babelfish.chess_analyzer import ChessAnalyzer
 from mcp_tools import MCP_TOOLS
 
+
 async def main():
     # Create server
     server = Server("babelfish")
@@ -26,7 +27,7 @@ async def main():
         try:
             if name == "analyze_position":
                 fen = arguments.get("fen")
-                depth = arguments.get("depth", 15)
+                depth = arguments.get("depth", 20)
 
                 if not fen:
                     return [
@@ -102,7 +103,7 @@ async def main():
 
             elif name == "analyze_game":
                 moves = arguments.get("moves", [])
-                depth = arguments.get("depth", 12)
+                depth = arguments.get("depth", 16)
 
                 if not moves:
                     return [

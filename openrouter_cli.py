@@ -90,14 +90,16 @@ class OpenRouterClient:
                 )
                 response.raise_for_status()
                 return response.json()
-                
+
             except requests.exceptions.HTTPError as e:
                 last_error = e
                 if e.response.status_code == 429:  # Rate limit
                     if attempt < max_retries:
                         # Exponential backoff: 1s, 2s, 4s
-                        wait_time = 2 ** attempt
-                        logger.warning(f"Rate limit hit. Waiting {wait_time}s before retry {attempt + 1}/{max_retries}")
+                        wait_time = 2**attempt
+                        logger.warning(
+                            f"Rate limit hit. Waiting {wait_time}s before retry {attempt + 1}/{max_retries}"
+                        )
                         time.sleep(wait_time)
                         continue
                     else:
@@ -106,7 +108,9 @@ class OpenRouterClient:
                 elif e.response.status_code >= 500:  # Server error
                     if attempt < max_retries:
                         wait_time = 1
-                        logger.warning(f"Server error {e.response.status_code}. Waiting {wait_time}s before retry {attempt + 1}/{max_retries}")
+                        logger.warning(
+                            f"Server error {e.response.status_code}. Waiting {wait_time}s before retry {attempt + 1}/{max_retries}"
+                        )
                         time.sleep(wait_time)
                         continue
                     else:
@@ -116,18 +120,20 @@ class OpenRouterClient:
                     # Client error (4xx), don't retry
                     logger.error(f"Chat completion failed: {e}")
                     raise e
-                    
+
             except Exception as e:
                 last_error = e
                 if attempt < max_retries:
                     wait_time = 1
-                    logger.warning(f"Request failed: {e}. Waiting {wait_time}s before retry {attempt + 1}/{max_retries}")
+                    logger.warning(
+                        f"Request failed: {e}. Waiting {wait_time}s before retry {attempt + 1}/{max_retries}"
+                    )
                     time.sleep(wait_time)
                     continue
                 else:
                     logger.error(f"Chat completion failed after all retries: {e}")
                     raise e
-        
+
         # This should never be reached, but just in case
         raise last_error or Exception("Unknown error in chat completion")
 
@@ -136,9 +142,7 @@ class MCPToolConverter:
     """Converts MCP tool definitions to OpenAI function calling format."""
 
     @staticmethod
-    def convert_mcp_tools_to_openai(
-        mcp_tools: List
-    ) -> List[Dict[str, Any]]:
+    def convert_mcp_tools_to_openai(mcp_tools: List) -> List[Dict[str, Any]]:
         """Convert MCP tool definitions to OpenAI function calling format."""
         openai_tools = []
 
@@ -160,7 +164,35 @@ class ConversationManager:
     """Manages conversation history and context."""
 
     def __init__(self):
-        self.messages: List[Dict[str, Any]] = []
+        # Start with a system message that encourages tool use
+        self.messages: List[Dict[str, Any]] = [
+            {
+                "role": "system",
+                "content": """You are Babelfish, an expert chess coach with access to powerful chess analysis tools. 
+
+CRITICAL: You MUST use your chess analysis tools to provide accurate, detailed chess coaching. Never guess about positions, evaluations, or moves without first analyzing them with the appropriate tools.
+
+Available tools and when to use them:
+- analyze_position: ALWAYS use this first when given a FEN position to get evaluation, best moves, and context
+- visualize_board: Use whenever discussing positions to show the actual board layout - essential for understanding
+- suggest_move: When asked for move recommendations  
+- evaluate_move_quality: To assess if a specific move was good/bad/blunder
+- get_principal_variation: To show the best continuation from a position
+- find_tactical_motifs: To identify pins, forks, skewers, and other tactics
+- analyze_game: When given a series of moves to analyze
+- analyze_endgame: For positions with few pieces remaining
+- explain_position: For human-readable position explanations
+
+TOOL USAGE PRINCIPLES:
+1. ALWAYS analyze positions with tools before discussing them
+2. Use visualize_board frequently so users can see what you're talking about  
+3. When users mention moves or positions, immediately use tools to understand them
+4. Use multiple tools in sequence for comprehensive analysis
+5. Don't just describe - SHOW with board visualizations and concrete analysis
+
+Your goal is to be the most helpful chess coach possible by leveraging these analysis tools extensively. Users learn better when you show them the actual positions and concrete analysis rather than abstract advice."""
+            }
+        ]
         self.tool_call_count = 0
         self.max_tool_calls = 10  # Prevent infinite loops
 
@@ -189,8 +221,12 @@ class ConversationManager:
         )
 
     def reset(self):
-        """Reset conversation history."""
-        self.messages.clear()
+        """Reset conversation history but keep the system message."""
+        # Keep only the system message (first message)
+        if self.messages and self.messages[0]["role"] == "system":
+            self.messages = [self.messages[0]]
+        else:
+            self.messages.clear()
         self.tool_call_count = 0
 
     def get_messages(self) -> List[Dict[str, Any]]:
@@ -242,11 +278,21 @@ class BabelfishMCPCLI:
         result_str = json.dumps(result, default=str)
         if len(result_str) > MAX_CHARS:
             # For chess tools, try to preserve the message content
-            if tool_name in ["analyze_position", "suggest_move", "get_principal_variation", 
-                           "evaluate_move_quality", "find_tactical_motifs", "analyze_endgame", "explain_position"]:
+            if tool_name in [
+                "analyze_position",
+                "suggest_move",
+                "get_principal_variation",
+                "evaluate_move_quality",
+                "find_tactical_motifs",
+                "analyze_endgame",
+                "explain_position",
+            ]:
                 # Truncate the message but preserve structure
                 if "message" in result and len(result["message"]) > MAX_CHARS - 500:
-                    result["message"] = result["message"][:MAX_CHARS - 500] + "\n\n*[Response truncated for length]*"
+                    result["message"] = (
+                        result["message"][: MAX_CHARS - 500]
+                        + "\n\n*[Response truncated for length]*"
+                    )
                     result["truncated"] = True
                 return result
             else:
@@ -287,9 +333,13 @@ class BabelfishMCPCLI:
                     inferred_name = self._infer_tool_name(arguments)
                     if inferred_name:
                         tool_name = inferred_name
-                        console.print(f"[yellow]⚠️  Tool call missing name, inferred: {tool_name}[/yellow]")
+                        console.print(
+                            f"[yellow]⚠️  Tool call missing name, inferred: {tool_name}[/yellow]"
+                        )
                     else:
-                        console.print("[red]⚠️  Warning: Tool call missing name and cannot infer[/red]")
+                        console.print(
+                            "[red]⚠️  Warning: Tool call missing name and cannot infer[/red]"
+                        )
                         console.print(f"[dim]Tool call structure: {tool_call}[/dim]")
                         console.print(f"[dim]Parsed arguments: {arguments}[/dim]")
                         continue
@@ -306,10 +356,10 @@ class BabelfishMCPCLI:
 
                 # Execute the tool
                 result = self.execute_tool(tool_name, arguments, user_id)
-                
+
                 # Display the tool result to the user
                 self._display_tool_result(tool_name, result)
-                
+
             except Exception as e:
                 console.print(f"[red]⚠️  Error processing tool call: {e}[/red]")
                 tool_name = "unknown"
@@ -329,12 +379,16 @@ class BabelfishMCPCLI:
         """Main chat loop."""
         console.print(
             Panel(
-                "[bold green]Babelfish CLI[/bold green]\n"
+                "[bold green]Babelfish CLI - Expert Chess Coach[/bold green]\n\n"
                 f"Model: {self.model}\n"
-                f"Available tools: {len(self.openai_tools)}\n"
-                "Type 'quit', 'exit', or 'q' to end the conversation.\n"
-                "Type '/help' for available commands.",
-                title="Welcome",
+                f"Available chess analysis tools: {len(self.openai_tools)}\n\n"
+                "[bold cyan]🐟 Your AI chess coach uses powerful analysis tools![/bold cyan]\n"
+                "• Provide chess positions (FEN notation) for deep analysis\n"
+                "• Ask about specific moves or game situations\n"
+                "• Get tactical analysis, evaluations, and move suggestions\n\n"
+                "[yellow]Commands:[/yellow] '/tools' to see available tools, '/help' for all commands\n"
+                "[dim]Type 'quit', 'exit', or 'q' to end the conversation.[/dim]",
+                title="🐟 Welcome to Babelfish",
             )
         )
 
@@ -354,7 +408,7 @@ class BabelfishMCPCLI:
                 # Add user message to conversation
                 self.conversation.add_user_message(user_input)
 
-                # Start tool call loop  
+                # Start tool call loop
                 max_iterations = 8  # Increased from 5 to handle complex chess analysis
                 iteration = 0
 
@@ -403,14 +457,24 @@ class BabelfishMCPCLI:
                 break
             except requests.exceptions.HTTPError as e:
                 if e.response.status_code == 429:
-                    console.print(f"[yellow]⚠️  Rate limit exceeded. Please wait a moment before trying again.[/yellow]")
-                    console.print(f"[dim]You may have hit OpenRouter's rate limits. Consider using a different model or waiting a few minutes.[/dim]")
+                    console.print(
+                        f"[yellow]⚠️  Rate limit exceeded. Please wait a moment before trying again.[/yellow]"
+                    )
+                    console.print(
+                        f"[dim]You may have hit OpenRouter's rate limits. Consider using a different model or waiting a few minutes.[/dim]"
+                    )
                 elif e.response.status_code == 401:
-                    console.print(f"[red]❌ Authentication failed. Please check your OpenRouter API key.[/red]")
+                    console.print(
+                        f"[red]❌ Authentication failed. Please check your OpenRouter API key.[/red]"
+                    )
                 elif e.response.status_code >= 500:
-                    console.print(f"[red]❌ Server error ({e.response.status_code}). OpenRouter may be experiencing issues.[/red]")
+                    console.print(
+                        f"[red]❌ Server error ({e.response.status_code}). OpenRouter may be experiencing issues.[/red]"
+                    )
                 else:
-                    console.print(f"[red]❌ API Error ({e.response.status_code}): {e}[/red]")
+                    console.print(
+                        f"[red]❌ API Error ({e.response.status_code}): {e}[/red]"
+                    )
                 logger.error(f"API error: {e}")
             except Exception as e:
                 console.print(f"[red]❌ Error: {e}[/red]")
@@ -446,9 +510,9 @@ class BabelfishMCPCLI:
         help_table.add_column("Command", style="cyan")
         help_table.add_column("Description", style="white")
 
+        help_table.add_row("/tools", "[bold]🐟 View chess analysis tools[/bold]")
         help_table.add_row("/help", "Show this help message")
         help_table.add_row("/models", "List available models")
-        help_table.add_row("/tools", "List available MCP tools")
         help_table.add_row("/reset", "Reset conversation history")
         help_table.add_row("/history", "Show conversation history")
         help_table.add_row("/model <name>", "Change the current model")
@@ -494,16 +558,27 @@ class BabelfishMCPCLI:
         console.print(f"[dim]Total available models: {len(models)}[/dim]")
 
     def _show_tools(self):
-        """Show available MCP tools."""
-        tool_table = Table(title="Available MCP Tools")
-        tool_table.add_column("Tool Name", style="cyan")
-        tool_table.add_column("Description", style="white")
-
-        for tool in MCP_TOOLS[:10]:  # Show first 10 tools
-            tool_table.add_row(tool.name, tool.description[:80] + "...")
-
-        console.print(tool_table)
-        console.print(f"[dim]Showing 10 of {len(MCP_TOOLS)} available tools[/dim]")
+        """Show available MCP tools with chess-specific guidance."""
+        console.print(Panel(
+            "[bold cyan]🐟 Chess Analysis Tools[/bold cyan]\n\n"
+            "Your AI coach uses these tools to provide expert analysis:\n\n"
+            "[bold yellow]Essential Tools:[/bold yellow]\n"
+            "• [cyan]analyze_position[/cyan] - Deep analysis of any position (provide FEN)\n"
+            "• [cyan]visualize_board[/cyan] - Show the board layout clearly\n"
+            "• [cyan]suggest_move[/cyan] - Get the best move recommendations\n\n"
+            "[bold yellow]Advanced Analysis:[/bold yellow]\n"
+            "• [cyan]evaluate_move_quality[/cyan] - Was that move good/bad/blunder?\n"
+            "• [cyan]find_tactical_motifs[/cyan] - Spot pins, forks, skewers\n"
+            "• [cyan]get_principal_variation[/cyan] - See the best continuation\n"
+            "• [cyan]analyze_endgame[/cyan] - Specialized endgame analysis\n"
+            "• [cyan]analyze_game[/cyan] - Full game move-by-move analysis\n\n"
+            "[bold green]💡 Pro Tips:[/bold green]\n"
+            "- Just provide a FEN position and ask questions!\n"
+            "- The AI will automatically use the right tools\n"
+            "- Try: 'Analyze this position: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'\n"
+            "- Or: 'What's the best move in this position?'",
+            title="🔧 Available Chess Tools"
+        ))
 
     def _show_history(self):
         """Show conversation history."""
@@ -545,7 +620,7 @@ class BabelfishMCPCLI:
 
 [dim]Note: Rate limits vary by model and your OpenRouter plan.[/dim]""",
             title="Rate Limits",
-            border_style="yellow"
+            border_style="yellow",
         )
         console.print(limits_panel)
 
@@ -553,24 +628,34 @@ class BabelfishMCPCLI:
         """Infer the tool name from arguments when name is missing."""
         if not isinstance(arguments, dict):
             return None
-        
+
         # Get available tools from the router
         available_tools = list(self.tool_router.tools.keys())
-        
+
         # Inference logic based on argument patterns
         if "fen" in arguments:
             if "move" in arguments:
                 # Has both fen and move -> likely evaluate_move_quality
-                return "evaluate_move_quality" if "evaluate_move_quality" in available_tools else None
+                return (
+                    "evaluate_move_quality"
+                    if "evaluate_move_quality" in available_tools
+                    else None
+                )
             elif "moves" in arguments:
-                # Has fen and moves -> likely analyze_game  
+                # Has fen and moves -> likely analyze_game
                 return "analyze_game" if "analyze_game" in available_tools else None
             elif "max_moves" in arguments:
                 # Has fen with max_moves -> likely get_principal_variation
-                return "get_principal_variation" if "get_principal_variation" in available_tools else None
+                return (
+                    "get_principal_variation"
+                    if "get_principal_variation" in available_tools
+                    else None
+                )
             elif arguments.get("depth", 0) >= 25:
                 # Has fen with very high depth (25+) -> likely analyze_endgame
-                return "analyze_endgame" if "analyze_endgame" in available_tools else None
+                return (
+                    "analyze_endgame" if "analyze_endgame" in available_tools else None
+                )
             else:
                 # Just has fen -> could be several tools, default to most common
                 # Priority: analyze_position > explain_position > suggest_move
@@ -580,7 +665,7 @@ class BabelfishMCPCLI:
         elif "moves" in arguments:
             # Only has moves -> analyze_game
             return "analyze_game" if "analyze_game" in available_tools else None
-        
+
         return None
 
     def _display_tool_result(self, tool_name: str, result_json: str):
@@ -588,55 +673,73 @@ class BabelfishMCPCLI:
         try:
             # Parse the result
             result = json.loads(result_json)
-            
+
             if result.get("status") == "success":
                 message = result.get("message", "")
-                
+
                 # Check if it's a chess tool result (contains the 🐟 symbol)
                 if "🐟" in message:
                     # Display chess analysis results with special formatting
                     console.print(f"\n[green]📋 Tool Result ({tool_name}):[/green]")
-                    
+
                     # Split the message into sections for better readability
-                    lines = message.split('\n')
+                    lines = message.split("\n")
                     formatted_lines = []
-                    
+
                     for line in lines:
-                        if line.startswith('🐟'):
+                        if line.startswith("🐟"):
                             # Main header - make it stand out
-                            formatted_lines.append(f"[bold magenta on black]{line}[/bold magenta on black]")
-                        elif line.startswith('**') and line.endswith('**') and len(line) > 4:
+                            formatted_lines.append(
+                                f"[bold magenta on black]{line}[/bold magenta on black]"
+                            )
+                        elif (
+                            line.startswith("**")
+                            and line.endswith("**")
+                            and len(line) > 4
+                        ):
                             # Bold section headers - remove ** and color
-                            clean_line = line.replace('**', '')
-                            formatted_lines.append(f"[bold yellow]{clean_line}[/bold yellow]")
-                        elif line.startswith('*') and line.endswith('*') and not line.startswith('**'):
+                            clean_line = line.replace("**", "")
+                            formatted_lines.append(
+                                f"[bold yellow]{clean_line}[/bold yellow]"
+                            )
+                        elif (
+                            line.startswith("*")
+                            and line.endswith("*")
+                            and not line.startswith("**")
+                        ):
                             # Italic text (analysis notes) - remove * and make dim
-                            clean_line = line.replace('*', '')
-                            formatted_lines.append(f"[dim italic]{clean_line}[/dim italic]")
-                        elif line.strip() and len(line) > 0 and (line.strip()[0].isdigit() or line.startswith('•')):
+                            clean_line = line.replace("*", "")
+                            formatted_lines.append(
+                                f"[dim italic]{clean_line}[/dim italic]"
+                            )
+                        elif (
+                            line.strip()
+                            and len(line) > 0
+                            and (line.strip()[0].isdigit() or line.startswith("•"))
+                        ):
                             # Numbered lists or bullet points - highlight moves
                             formatted_lines.append(f"[bright_cyan]{line}[/bright_cyan]")
                         elif line.strip():
                             formatted_lines.append(f"[white]{line}[/white]")
                         else:
                             formatted_lines.append(line)  # Keep empty lines as-is
-                    
-                    formatted_message = '\n'.join(formatted_lines)
+
+                    formatted_message = "\n".join(formatted_lines)
                     console.print(formatted_message)
                     console.print("")  # Add spacing
-                    
+
                 else:
                     # Non-chess tool result
                     console.print(f"\n[green]📋 Tool Result ({tool_name}):[/green]")
                     console.print(message)
                     console.print("")
-                    
+
             elif result.get("status") == "error":
                 error_msg = result.get("message", "Unknown error")
                 console.print(f"\n[red]❌ Tool Error ({tool_name}):[/red]")
                 console.print(f"[red]{error_msg}[/red]")
                 console.print("")
-                
+
             else:
                 # Fallback for unexpected result format
                 console.print(f"\n[yellow]🔧 Tool Output ({tool_name}):[/yellow]")
@@ -644,7 +747,7 @@ class BabelfishMCPCLI:
                 if len(result_json) > 500:
                     console.print("[dim]...[truncated][/dim]")
                 console.print("")
-                
+
         except json.JSONDecodeError:
             # If result isn't valid JSON, display as-is (truncated)
             console.print(f"\n[yellow]🔧 Tool Output ({tool_name}):[/yellow]")
@@ -665,10 +768,6 @@ def main():
     parser.add_argument(
         "--model", default="anthropic/claude-3.5-sonnet", help="Model to use"
     )
-    parser.add_argument(
-        "--backend", choices=["sqlite", "postgresql"], help="Database backend"
-    )
-    parser.add_argument("--db-url", help="Database connection URL for PostgreSQL")
 
     args = parser.parse_args()
 
@@ -678,12 +777,6 @@ def main():
         console.print("[red]Error: OpenRouter API key required.[/red]")
         console.print("Set OPENROUTER_API_KEY environment variable or use --api-key")
         sys.exit(1)
-
-    # Set environment variables if provided
-    if args.backend:
-        os.environ["PANTRY_BACKEND"] = args.backend
-    if args.db_url:
-        os.environ["PANTRY_DATABASE_URL"] = args.db_url
 
     try:
         # Initialize and start CLI
