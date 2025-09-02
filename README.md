@@ -37,6 +37,54 @@ brew install stockfish
 
 ## Usage
 
+### Web Interface (Recommended)
+
+The most user-friendly way to use Babelfish is through its web interface. This provides an intuitive chat-based interface for chess analysis.
+
+![Web Interface Screenshot](example.png)
+
+#### Quick Start
+
+1. **Set up your OpenRouter API key**:
+   ```bash
+   export OPENROUTER_API_KEY="your-api-key-here"
+   ```
+
+2. **Start the web interface**:
+   ```bash
+   uv run python start_web.py
+   ```
+
+3. **Open your browser** and go to `http://localhost:5000`
+
+#### Model Recommendations and Costs
+
+**⚠️ Important Cost Warning**: Using OpenRouter models incurs costs based on token usage. Monitor your usage to avoid unexpected charges.
+
+**Recommended Model**: Based on testing, `openai/o1` provides the best chess analysis quality, offering superior positional understanding and tactical insights compared to other models.
+
+**Alternative Models**: You can also try:
+- `anthropic/claude-3.5-sonnet` - Good balance of cost and quality
+- `openai/gpt-4o` - Strong general performance
+- `meta-llama/llama-3.1-70b-instruct` - More cost-effective option
+
+#### Features
+
+- **Interactive Chat Interface**: Ask questions about positions in natural language
+- **Visual Chess Board**: See positions and moves clearly displayed
+- **Real-time Analysis**: Get instant feedback on positions and moves
+- **Game Analysis**: Upload PGN files or input move sequences
+- **Multiple Model Support**: Choose from various AI models via OpenRouter
+
+#### Example Usage
+
+Once the web interface is running, you can:
+
+- **Analyze a position**: "What's the best move in this position: rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2"
+- **Evaluate moves**: "Is Nf3 a good move here?"
+- **Get strategic advice**: "What's the plan for White in this position?"
+- **Analyze games**: Paste PGN notation or describe a game sequence
+
 ### Standalone Demo
 
 Run the demo to test the chess analyzer:
