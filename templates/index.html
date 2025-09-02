@@ -319,6 +319,88 @@
             margin-bottom: 5px;
         }
 
+        /* Input tabs styling */
+        .input-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e4e7;
+        }
+
+        .input-tab {
+            padding: 10px 20px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+
+        .input-tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .input-tab:hover {
+            color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .input-tab-content {
+            display: none;
+        }
+
+        .input-tab-content.active {
+            display: block;
+        }
+
+        /* File input styling */
+        .file-input {
+            padding: 15px;
+            border: 2px dashed #e0e4e7;
+            border-radius: 8px;
+            background: #f8f9fa;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .file-input:hover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            background: #e8f5e8;
+            border: 1px solid #4caf50;
+            border-radius: 6px;
+            margin-top: 10px;
+        }
+
+        .clear-btn {
+            background: #f44336;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+            line-height: 1;
+        }
+
+        .clear-btn:hover {
+            background: #d32f2f;
+        }
+
         @media (max-width: 1024px) {
             .container {
                 grid-template-columns: 1fr;
@@ -349,19 +431,49 @@
             </div>
 
             <div class="controls">
-                <div class="input-group">
-                    <label for="fenInput">Chess Position (FEN)</label>
-                    <input type="text" id="fenInput" value="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1" placeholder="Enter FEN notation...">
+                <!-- Input Type Tabs -->
+                <div class="input-tabs">
+                    <button class="input-tab active" onclick="showInputTab('fen')">📝 FEN Position</button>
+                    <button class="input-tab" onclick="showInputTab('pgn')">📄 PGN File</button>
                 </div>
 
-                <div class="input-group">
-                    <label for="questionInput">Optional: Specific Question</label>
-                    <textarea id="questionInput" rows="6" placeholder="e.g., 'What are the best moves for White?' or 'Analyze the tactical themes in this position'"></textarea>
+                <!-- FEN Input Tab -->
+                <div id="fen-input" class="input-tab-content active">
+                    <div class="input-group">
+                        <label for="fenInput">Chess Position (FEN)</label>
+                        <input type="text" id="fenInput" value="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1" placeholder="Enter FEN notation...">
+                    </div>
+
+                    <div class="input-group">
+                        <label for="fenQuestionInput">Optional: Specific Question</label>
+                        <textarea id="fenQuestionInput" rows="4" placeholder="e.g., 'What are the best moves for White?' or 'Analyze the tactical themes in this position'"></textarea>
+                    </div>
+
+                    <button class="analyze-btn" id="analyzeFenBtn" onclick="analyzePosition()">
+                        🔍 Analyze Position
+                    </button>
                 </div>
 
-                <button class="analyze-btn" id="analyzeBtn" onclick="analyzePosition()">
-                    🔍 Analyze Position
-                </button>
+                <!-- PGN Input Tab -->
+                <div id="pgn-input" class="input-tab-content">
+                    <div class="input-group">
+                        <label for="pgnFileInput">Upload PGN File</label>
+                        <input type="file" id="pgnFileInput" accept=".pgn" class="file-input">
+                        <div class="file-info" id="fileInfo" style="display: none;">
+                            <span id="fileName"></span>
+                            <button type="button" onclick="clearFile()" class="clear-btn">×</button>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="pgnQuestionInput">Optional: Specific Question</label>
+                        <textarea id="pgnQuestionInput" rows="4" placeholder="e.g., 'What were the key moments in this game?' or 'Analyze the opening strategy'"></textarea>
+                    </div>
+
+                    <button class="analyze-btn" id="analyzePgnBtn" onclick="analyzePgnFile()">
+                        🔍 Analyze Game
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -429,12 +541,16 @@
                         });
                     }
                 }, 200);
+
+                // Initialize file input functionality
+                setupFileInput();
             } catch (e) {
                 console.error('Error initializing board:', e);
             }
         });
 
         let currentTab = 'analysis';
+        let currentInputTab = 'fen';
 
         // Function to update board and validate FEN
         function updateBoardFromFEN(fen) {
@@ -504,6 +620,119 @@
             }
         }
 
+        // Input tab switching
+        function showInputTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.input-tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Update tab content
+            document.querySelectorAll('.input-tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(tabName + '-input').classList.add('active');
+
+            currentInputTab = tabName;
+        }
+
+        // File handling functions
+        function setupFileInput() {
+            const fileInput = document.getElementById('pgnFileInput');
+            const fileInfo = document.getElementById('fileInfo');
+            const fileName = document.getElementById('fileName');
+
+            fileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    if (!file.name.toLowerCase().endsWith('.pgn')) {
+                        alert('Please select a .pgn file');
+                        fileInput.value = '';
+                        return;
+                    }
+                    fileName.textContent = file.name;
+                    fileInfo.style.display = 'flex';
+
+                    // Preview the final position if possible
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            // Simple preview - just update board to show it's ready
+                            console.log('PGN file loaded:', file.name);
+                        } catch (err) {
+                            console.error('Error reading PGN:', err);
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            });
+        }
+
+        function clearFile() {
+            const fileInput = document.getElementById('pgnFileInput');
+            const fileInfo = document.getElementById('fileInfo');
+
+            fileInput.value = '';
+            fileInfo.style.display = 'none';
+        }
+
+        // PGN analysis function
+        async function analyzePgnFile() {
+            const fileInput = document.getElementById('pgnFileInput');
+            const question = document.getElementById('pgnQuestionInput').value.trim();
+            const analyzeBtn = document.getElementById('analyzePgnBtn');
+            const analysisContent = document.querySelector('#analysis-tab .analysis-content');
+            const debugContent = document.querySelector('#debug-tab .debug-log');
+
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert('Please select a PGN file');
+                return;
+            }
+
+            const file = fileInput.files[0];
+
+            // Update UI for loading state
+            analyzeBtn.disabled = true;
+            analyzeBtn.innerHTML = '<div class="spinner"></div>Analyzing Game...';
+
+            analysisContent.innerHTML = '<div class="loading"><div class="spinner"></div>AI is analyzing the chess game...</div>';
+            debugContent.innerHTML = '<div class="loading"><div class="spinner"></div>Loading debug information...</div>';
+
+            try {
+                const formData = new FormData();
+                formData.append('pgn_file', file);
+                formData.append('question', question);
+
+                const response = await fetch('/analyze_pgn', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Display analysis (convert markdown to HTML)
+                    analysisContent.innerHTML = marked.parse(result.analysis || 'No analysis returned.');
+
+                    // Update board to show final position
+                    if (result.board_fen) {
+                        updateBoardFromFEN(result.board_fen);
+                    }
+
+                    // Display debug log
+                    debugContent.innerHTML = formatDebugLog(result.debug_log || []);
+                } else {
+                    analysisContent.innerHTML = `<div class="error">❌ Analysis failed: ${result.error}</div>`;
+                    debugContent.innerHTML = `<div class="error">❌ Error: ${result.error}</div>`;
+                }
+
+            } catch (error) {
+                analysisContent.innerHTML = `<div class="error">❌ Network error: ${error.message}</div>`;
+                debugContent.innerHTML = `<div class="error">❌ Network error: ${error.message}</div>`;
+            } finally {
+                // Reset button
+                analyzeBtn.disabled = false;
+                analyzeBtn.innerHTML = '🔍 Analyze Game';
+            }
+        }
+
         // Preset positions
         function loadPreset(preset) {
             const presets = {
@@ -536,8 +765,8 @@
         // Analysis function
         async function analyzePosition() {
             const fen = document.getElementById('fenInput').value.trim();
-            const question = document.getElementById('questionInput').value.trim();
-            const analyzeBtn = document.getElementById('analyzeBtn');
+            const question = document.getElementById('fenQuestionInput').value.trim();
+            const analyzeBtn = document.getElementById('analyzeFenBtn');
             const analysisContent = document.querySelector('#analysis-tab .analysis-content');
             const debugContent = document.querySelector('#debug-tab .debug-log');
 
@@ -636,10 +865,16 @@
             return div.innerHTML;
         }
 
-        // Allow Enter key to trigger analysis
-        document.getElementById('questionInput').addEventListener('keydown', function(e) {
+        // Allow Enter key to trigger analysis for both input modes
+        document.getElementById('fenQuestionInput').addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && e.ctrlKey) {
                 analyzePosition();
+            }
+        });
+
+        document.getElementById('pgnQuestionInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                analyzePgnFile();
             }
         });
     </script>
