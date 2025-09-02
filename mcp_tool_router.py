@@ -485,21 +485,20 @@ class MCPToolRouter:
                     else eval_before_cp
                 )
 
-                # Determine move quality based on how much evaluation dropped
-                move_quality = "Excellent"
-                if change <= -200:
-                    move_quality = "Blunder"
-                elif change <= -100:
-                    move_quality = "Mistake"
-                elif change <= -50:
-                    move_quality = "Inaccuracy"
-                elif change <= -10:
-                    move_quality = "Good"
-                else:
-                    move_quality = "Excellent"  # Very close to best
-
                 # Calculate loss compared to best move
                 best_move_loss = best_move_eval - eval_move_cp
+
+                # Determine move quality based on loss compared to best move (not change)
+                if best_move_loss <= 10:  # Within 0.1 pawns of best
+                    move_quality = "Excellent"
+                elif best_move_loss <= 50:  # Within 0.5 pawns of best
+                    move_quality = "Good"
+                elif best_move_loss <= 100:  # Within 1.0 pawn of best
+                    move_quality = "Inaccuracy"
+                elif best_move_loss <= 200:  # Within 2.0 pawns of best
+                    move_quality = "Mistake"
+                else:  # More than 2.0 pawns worse than best
+                    move_quality = "Blunder"
 
                 formatted_response = f"""🐟 **Move Quality Evaluation**
 
