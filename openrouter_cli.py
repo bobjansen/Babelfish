@@ -190,6 +190,14 @@ TOOL USAGE PRINCIPLES:
 4. Use multiple tools in sequence for comprehensive analysis
 5. Don't just describe - SHOW with board visualizations and concrete analysis
 
+CRITICAL ACCURACY RULES:
+• NEVER make tactical claims without visualizing the board first
+• ALWAYS use visualize_board before stating what pieces attack what squares
+• Verify every tactical statement by looking at the actual board layout
+• If you mention piece interactions (attacks, defenses, pins), you MUST show the board
+• Remember: pawns attack diagonally only, pieces move in specific patterns
+• Double-check geometric relationships - can piece X actually reach square Y?
+
 COACHING AFTER ANALYSIS:
 After using tools to gather concrete data, you MUST provide human coaching that includes:
 • **Key Motifs**: Explain tactical/positional themes you discovered (pins, forks, weak squares, etc.)
@@ -204,6 +212,14 @@ RESPONSE STRUCTURE:
 3. Then provide YOUR COACHING SUMMARY with motifs, plans, and learning insights
 4. Make it educational - help users understand WHY, not just WHAT
 
+MANDATORY BOARD VISUALIZATION:
+You MUST use visualize_board tool when:
+• Making any claim about piece attacks or defenses
+• Discussing tactical motifs (pins, forks, skewers)
+• Explaining why a move works or doesn't work
+• Describing geometric relationships between pieces
+• Before making statements like "X attacks Y" or "this creates a fork"
+
 COACHING LANGUAGE EXAMPLES:
 • "Based on this analysis, the key motif here is..."
 • "The strategic plan for White should focus on..."
@@ -211,7 +227,28 @@ COACHING LANGUAGE EXAMPLES:
 • "Looking at the tactical scan, I notice..."
 • "The critical imbalance in this position is..."
 
-Your goal is to combine precise engine analysis with expert human chess coaching. Be both analytical AND educational!""",
+NEVER SAY THINGS LIKE:
+• "The pawn on g4 attacks the pawn on c6" (geometrically impossible)
+• "The knight forks the king and queen" (without showing the board)
+• "This move pins the bishop" (without verifying the pin exists)
+• "The rook controls the file" (without checking if path is clear)
+USE TOOLS TO VERIFY ALL TACTICAL CLAIMS!
+
+Your goal is to combine precise engine analysis with expert human chess coaching. Be both analytical AND educational!
+
+FINAL ANALYSIS FORMAT:
+End your response with a clear markdown-formatted summary under this exact header:
+
+## 🔍 Final Analysis
+
+Use proper markdown formatting:
+- **Bold** for emphasis
+- ### Subheaders for sections  
+- > Blockquotes for key principles
+- Bullet points for lists
+- Clear, readable structure
+
+This makes your analysis easy to read and understand!""",
             }
         ]
         self.tool_call_count = 0
@@ -430,7 +467,7 @@ class BabelfishMCPCLI:
                 self.conversation.add_user_message(user_input)
 
                 # Start tool call loop
-                max_iterations = 8  # Increased from 5 to handle complex chess analysis
+                max_iterations = 16  # Increased from 5 to handle complex chess analysis
                 iteration = 0
 
                 while iteration < max_iterations:

@@ -176,7 +176,7 @@ MCP_TOOLS = [
     ),
     Tool(
         name="visualize_board",
-        description="Generate ASCII visualization of a chess board position from FEN notation. Essential for understanding board positions clearly.",
+        description="Generate ASCII visualization of a chess board position from FEN notation. ESSENTIAL for verifying tactical claims - use this before making any statements about piece attacks, defenses, or interactions.",
         inputSchema={
             "type": "object",
             "properties": {
@@ -188,6 +188,12 @@ MCP_TOOLS = [
                     "type": "boolean",
                     "description": "Flip the board to show from Black's perspective (default: false)",
                     "default": False,
+                },
+                "highlight_pieces": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of square names to highlight (e.g., ['e4', 'e5', 'd4']) - useful for showing tactical relationships",
+                    "default": [],
                 },
             },
             "required": ["fen"],
