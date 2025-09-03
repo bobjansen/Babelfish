@@ -476,6 +476,8 @@
             border: 1px solid #4caf50;
             border-radius: 6px;
             margin-top: 10px;
+            color: #2e7d32;
+            font-weight: 600;
         }
 
         .clear-btn {
@@ -495,6 +497,138 @@
 
         .clear-btn:hover {
             background: #d32f2f;
+        }
+
+        /* Navigation Panel Styling */
+        .navigation-panel {
+            margin-bottom: 25px;
+            background: linear-gradient(145deg, #f5f5dc 0%, #e8e5d0 100%);
+            border: 2px solid #8b4513;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: inset 0 2px 4px rgba(139, 69, 19, 0.1);
+        }
+
+        .move-display {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .current-move {
+            font-size: 16px;
+            font-weight: bold;
+            color: #8b4513;
+            font-family: 'Courier New', monospace;
+            background: rgba(139, 69, 19, 0.1);
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-bottom: 5px;
+        }
+
+        .position-info {
+            font-size: 12px;
+            color: #a0522d;
+            font-style: italic;
+        }
+
+        .navigation-controls {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .nav-btn {
+            background: linear-gradient(145deg, #8b4513 0%, #a0522d 50%, #8b4513 100%);
+            color: #f5f5dc;
+            border: 2px solid #654321;
+            border-radius: 8px;
+            padding: 10px 16px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(139, 69, 19, 0.3);
+            min-width: 48px;
+        }
+
+        .nav-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(139, 69, 19, 0.4);
+            background: linear-gradient(145deg, #a0522d 0%, #cd853f 50%, #a0522d 100%);
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .move-list {
+            max-height: 120px;
+            overflow-y: auto;
+            background: rgba(255, 255, 255, 0.3);
+            border: 1px solid #d2691e;
+            border-radius: 8px;
+            padding: 10px;
+        }
+
+        .move-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .move-row {
+            border-bottom: 1px solid rgba(210, 105, 30, 0.2);
+        }
+
+        .move-number {
+            width: 30px;
+            text-align: center;
+            padding: 4px;
+            font-weight: 600;
+            color: #8b4513;
+            background: rgba(139, 69, 19, 0.05);
+        }
+
+        .move-cell {
+            width: calc(50% - 15px);
+            padding: 4px 8px;
+            cursor: pointer;
+            border-radius: 4px;
+            color: #654321;
+            transition: all 0.2s ease;
+            background: rgba(139, 69, 19, 0.1);
+            position: relative;
+        }
+
+        .move-cell.white-move {
+            border-right: 1px solid rgba(210, 105, 30, 0.2);
+        }
+
+        .move-cell.black-move {
+            border-left: 1px solid rgba(210, 105, 30, 0.2);
+        }
+
+        .move-cell:hover {
+            background: rgba(139, 69, 19, 0.2);
+            transform: scale(1.05);
+        }
+
+        .move-cell.current {
+            background: #8b4513;
+            color: #f5f5dc;
+            font-weight: bold;
+        }
+
+        .move-item.white {
+            margin-right: 4px;
+        }
+
+        .move-item.black {
+            margin-right: 12px;
         }
 
         @media (max-width: 1024px) {
@@ -524,6 +658,33 @@
 
             <div class="board-container">
                 <div id="myBoard" style="width: 350px"></div>
+            </div>
+
+            <!-- Game Navigation Controls -->
+            <div class="navigation-panel" id="navigationPanel" style="display: none;">
+                <div class="move-display">
+                    <div class="current-move" id="currentMove">Move 1: 1. e4</div>
+                    <div class="position-info" id="positionInfo">Move 1 of 42</div>
+                </div>
+
+                <div class="navigation-controls">
+                    <button class="nav-btn" id="firstMoveBtn" onclick="goToMove(0)" title="First move (Home)">
+                        ⏮
+                    </button>
+                    <button class="nav-btn" id="prevMoveBtn" onclick="previousMove()" title="Previous move (←)">
+                        ◀
+                    </button>
+                    <button class="nav-btn" id="nextMoveBtn" onclick="nextMove()" title="Next move (→)">
+                        ▶
+                    </button>
+                    <button class="nav-btn" id="lastMoveBtn" onclick="goToMove(-1)" title="Last move (End)">
+                        ⏭
+                    </button>
+                </div>
+
+                <div class="move-list" id="moveList">
+                    <!-- Moves will be populated here -->
+                </div>
             </div>
 
             <div class="controls">
@@ -567,7 +728,7 @@
                     </div>
 
                     <button class="analyze-btn" id="analyzePgnBtn" onclick="analyzePgnFile()">
-                        🔍 Analyze Game
+                        🤖 Get AI Analysis
                     </button>
                 </div>
             </div>
@@ -638,8 +799,10 @@
                     }
                 }, 200);
 
-                // Initialize file input functionality
-                setupFileInput();
+                // Initialize file input functionality with slight delay
+                setTimeout(function() {
+                    setupFileInput();
+                }, 500);
             } catch (e) {
                 console.error('Error initializing board:', e);
             }
@@ -647,6 +810,15 @@
 
         let currentTab = 'analysis';
         let currentInputTab = 'fen';
+
+        // Game navigation state
+        let gameData = {
+            moves: [],
+            positions: [],
+            evaluations: [],
+            currentMoveIndex: -1,
+            isGameLoaded: false
+        };
 
         // Function to update board and validate FEN
         function updateBoardFromFEN(fen) {
@@ -726,37 +898,59 @@
             document.querySelectorAll('.input-tab-content').forEach(content => content.classList.remove('active'));
             document.getElementById(tabName + '-input').classList.add('active');
 
+            // Hide navigation panel when switching to FEN mode
+            if (tabName === 'fen') {
+                hideNavigationPanel();
+            }
+
             currentInputTab = tabName;
         }
 
         // File handling functions
         function setupFileInput() {
+            console.log('Setting up file input...');
             const fileInput = document.getElementById('pgnFileInput');
             const fileInfo = document.getElementById('fileInfo');
             const fileName = document.getElementById('fileName');
 
+            if (!fileInput || !fileInfo || !fileName) {
+                console.error('File input elements not found:', {fileInput, fileInfo, fileName});
+                return;
+            }
+
             fileInput.addEventListener('change', function(e) {
+                console.log('File input changed:', e.target.files);
                 const file = e.target.files[0];
                 if (file) {
-                    if (!file.name.toLowerCase().endsWith('.pgn')) {
-                        alert('Please select a .pgn file');
+                    console.log('Selected file:', file.name, 'type:', file.type, 'size:', file.size);
+
+                    // More permissive validation - accept .pgn files regardless of MIME type
+                    const filename = file.name.toLowerCase();
+                    if (!filename.endsWith('.pgn') && !filename.endsWith('.txt')) {
+                        alert('Please select a .pgn file (or .txt file containing PGN data)');
                         fileInput.value = '';
+                        fileInfo.style.display = 'none';
                         return;
                     }
+
+                    // Check file size (reasonable limit for PGN files)
+                    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                        alert('File too large. Please select a file smaller than 5MB.');
+                        fileInput.value = '';
+                        fileInfo.style.display = 'none';
+                        return;
+                    }
+
                     fileName.textContent = file.name;
                     fileInfo.style.display = 'flex';
+                    console.log('File info displayed successfully');
 
-                    // Preview the final position if possible
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        try {
-                            // Simple preview - just update board to show it's ready
-                            console.log('PGN file loaded:', file.name);
-                        } catch (err) {
-                            console.error('Error reading PGN:', err);
-                        }
-                    };
-                    reader.readAsText(file);
+                    // Immediately parse PGN and setup navigation
+                    setupNavigationFromFile(file);
+                } else {
+                    console.log('No file selected');
+                    fileInfo.style.display = 'none';
+                    hideNavigationPanel();
                 }
             });
         }
@@ -765,31 +959,326 @@
             const fileInput = document.getElementById('pgnFileInput');
             const fileInfo = document.getElementById('fileInfo');
 
-            fileInput.value = '';
-            fileInfo.style.display = 'none';
+            if (fileInput) fileInput.value = '';
+            if (fileInfo) fileInfo.style.display = 'none';
+            hideNavigationPanel();
+            console.log('File cleared');
         }
 
-        // PGN analysis function
+        // New function to immediately setup navigation from uploaded file
+        function setupNavigationFromFile(file) {
+            console.log('Setting up navigation from file:', file.name);
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const pgn_content = e.target.result;
+                console.log('PGN content loaded, length:', pgn_content.length);
+                console.log('First 200 chars:', pgn_content.substring(0, 200));
+
+                // Parse game for navigation immediately
+                const success = parseGameForNavigation(pgn_content, null);
+                if (success) {
+                    console.log('✅ Navigation setup complete! You can now browse the game.');
+
+                    // Show a message that navigation is ready
+                    const analysisContent = document.querySelector('#analysis-tab .analysis-content');
+                    if (analysisContent) {
+                        analysisContent.innerHTML = `
+                            <div style="text-align: center; padding: 30px; color: #8b4513;">
+                                <h3>🎯 Game Loaded Successfully!</h3>
+                                <p>Use the navigation controls below the board to browse through the moves.</p>
+                                <p style="margin-top: 15px;"><em>Click "🔍 Analyze Game" for AI analysis (optional)</em></p>
+                            </div>
+                        `;
+                    }
+                } else {
+                    console.error('❌ Failed to setup navigation');
+                    alert('Could not parse the PGN file. Please check if it contains valid chess notation.');
+                }
+            };
+
+            reader.onerror = function(e) {
+                console.error('FileReader error:', e);
+                alert('Error reading the file. Please try again.');
+            };
+
+            reader.readAsText(file);
+        }
+
+        // Game navigation functions
+        function parseGameForNavigation(pgn_content, analysis_result) {
+            console.log('Parsing game for navigation...');
+            try {
+                // Use chess.js to parse the PGN and generate position history
+                if (typeof Chess === 'undefined') {
+                    console.error('Chess.js not available');
+                    alert('Chess.js library not loaded. Navigation disabled.');
+                    return false;
+                }
+
+                const chess = new Chess();
+                gameData.moves = [];
+                gameData.positions = [];
+                gameData.evaluations = [];
+
+                // Add starting position
+                gameData.positions.push(chess.fen());
+
+                // Extract moves from PGN content
+                const moves = extractMovesFromPGN(pgn_content);
+                console.log('Processing', moves.length, 'moves');
+
+                if (moves.length === 0) {
+                    console.warn('No moves found in PGN');
+                    return false;
+                }
+
+                let successfulMoves = 0;
+                for (let i = 0; i < moves.length; i++) {
+                    try {
+                        const moveStr = moves[i].trim();
+                        if (!moveStr) continue;
+
+                        const move = chess.move(moveStr);
+                        if (move) {
+                            gameData.moves.push({
+                                san: move.san,
+                                moveNumber: Math.floor(i / 2) + 1,
+                                isWhite: i % 2 === 0,
+                                index: i
+                            });
+                            gameData.positions.push(chess.fen());
+                            successfulMoves++;
+                        } else {
+                            console.warn('Invalid move:', moveStr);
+                        }
+                    } catch (e) {
+                        console.error('Error parsing move:', moves[i], e);
+                        // Continue with next move instead of breaking
+                    }
+                }
+
+                console.log(`Successfully parsed ${successfulMoves} moves`);
+
+                if (successfulMoves === 0) {
+                    console.error('No valid moves found');
+                    alert('Could not parse any moves from this PGN file. Please check the format.');
+                    return false;
+                }
+
+                gameData.currentMoveIndex = gameData.moves.length; // Start at final position
+                gameData.isGameLoaded = true;
+
+                // Show navigation panel and populate move list
+                showNavigationPanel();
+                populateMoveList();
+                updateNavigationDisplay();
+
+                console.log('Navigation setup complete');
+                return true;
+            } catch (e) {
+                console.error('Error parsing game for navigation:', e);
+                alert('Error setting up game navigation: ' + e.message);
+                return false;
+            }
+        }
+
+        function extractMovesFromPGN(pgn_content) {
+            console.log('Extracting moves from PGN...');
+            try {
+                // More robust move extraction
+                let gameText = pgn_content.replace(/\[.*?\]/g, ''); // Remove headers
+                gameText = gameText.replace(/\{[^}]*\}/g, ''); // Remove comments and evaluations
+                gameText = gameText.replace(/\([^)]*\)/g, ''); // Remove variations
+                gameText = gameText.replace(/[?!+#]+/g, ''); // Remove annotations
+                gameText = gameText.replace(/\d+\.\.\./g, ''); // Remove black move numbers
+                gameText = gameText.replace(/\d+\./g, ''); // Remove white move numbers
+                gameText = gameText.replace(/\s+/g, ' ').trim(); // Normalize whitespace
+                gameText = gameText.replace(/\s*(1-0|0-1|1\/2-1\/2|\*)\s*$/, ''); // Remove result
+
+                const moves = gameText.split(' ').filter(move => {
+                    const trimmed = move.trim();
+                    return trimmed.length > 0 &&
+                           !trimmed.match(/^\d/) && // No numbers
+                           !trimmed.match(/^[?!+#]+$/); // No pure annotations
+                });
+
+                console.log('Extracted moves:', moves.slice(0, 10), '... total:', moves.length);
+                return moves;
+            } catch (e) {
+                console.error('Error extracting moves:', e);
+                return [];
+            }
+        }
+
+        function showNavigationPanel() {
+            document.getElementById('navigationPanel').style.display = 'block';
+        }
+
+        function hideNavigationPanel() {
+            document.getElementById('navigationPanel').style.display = 'none';
+            gameData.isGameLoaded = false;
+        }
+
+        function populateMoveList() {
+            const moveList = document.getElementById('moveList');
+            moveList.innerHTML = '';
+
+            const table = document.createElement('table');
+            table.className = 'move-table';
+
+            let currentRow = null;
+            let whiteCell = null;
+
+            for (let i = 0; i < gameData.moves.length; i++) {
+                const moveData = gameData.moves[i];
+
+                if (moveData.isWhite) {
+                    // Start a new row for white moves
+                    currentRow = document.createElement('tr');
+                    currentRow.className = 'move-row';
+
+                    // Add move number cell
+                    const numberCell = document.createElement('td');
+                    numberCell.className = 'move-number';
+                    numberCell.textContent = moveData.moveNumber;
+                    currentRow.appendChild(numberCell);
+
+                    // Add white move cell
+                    whiteCell = document.createElement('td');
+                    whiteCell.className = 'move-cell white-move';
+                    whiteCell.textContent = moveData.san;
+                    whiteCell.onclick = () => goToMove(i + 1);
+                    whiteCell.dataset.moveIndex = i;
+                    currentRow.appendChild(whiteCell);
+
+                    // Add empty black cell (will be filled if black move exists)
+                    const blackCell = document.createElement('td');
+                    blackCell.className = 'move-cell black-move';
+                    blackCell.textContent = '';
+                    currentRow.appendChild(blackCell);
+
+                    table.appendChild(currentRow);
+                } else {
+                    // Fill the black move cell in the current row
+                    if (currentRow) {
+                        const blackCell = currentRow.querySelector('.black-move');
+                        if (blackCell) {
+                            blackCell.textContent = moveData.san;
+                            blackCell.onclick = () => goToMove(i + 1);
+                            blackCell.dataset.moveIndex = i;
+                        }
+                    }
+                }
+            }
+
+            moveList.appendChild(table);
+        }
+
+        function updateNavigationDisplay() {
+            const currentMove = document.getElementById('currentMove');
+            const positionInfo = document.getElementById('positionInfo');
+
+            if (gameData.currentMoveIndex === 0) {
+                currentMove.textContent = 'Starting Position';
+            } else {
+                const moveData = gameData.moves[gameData.currentMoveIndex - 1];
+                if (moveData.isWhite) {
+                    currentMove.textContent = `${moveData.moveNumber}. ${moveData.san}`;
+                } else {
+                    currentMove.textContent = `${moveData.moveNumber}...${moveData.san}`;
+                }
+            }
+
+            positionInfo.textContent = `Move ${gameData.currentMoveIndex} of ${gameData.moves.length}`;
+
+            // Update button states
+            document.getElementById('firstMoveBtn').disabled = gameData.currentMoveIndex === 0;
+            document.getElementById('prevMoveBtn').disabled = gameData.currentMoveIndex === 0;
+            document.getElementById('nextMoveBtn').disabled = gameData.currentMoveIndex >= gameData.moves.length;
+            document.getElementById('lastMoveBtn').disabled = gameData.currentMoveIndex >= gameData.moves.length;
+
+            // Highlight current move in move list
+            document.querySelectorAll('.move-cell').forEach(cell => {
+                cell.classList.remove('current');
+                const moveIndex = parseInt(cell.dataset.moveIndex);
+                if (moveIndex === gameData.currentMoveIndex - 1) {
+                    cell.classList.add('current');
+                    // Auto-scroll to current move
+                    const moveList = document.getElementById('moveList');
+                    const cellRect = cell.getBoundingClientRect();
+                    const listRect = moveList.getBoundingClientRect();
+
+                    if (cellRect.top < listRect.top || cellRect.bottom > listRect.bottom) {
+                        cell.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center',
+                            inline: 'nearest'
+                        });
+                    }
+                }
+            });
+
+            // Update board position
+            if (gameData.positions[gameData.currentMoveIndex]) {
+                updateBoardFromFEN(gameData.positions[gameData.currentMoveIndex]);
+            }
+        }
+
+        function goToMove(moveIndex) {
+            if (!gameData.isGameLoaded) return;
+
+            if (moveIndex === -1) {
+                moveIndex = gameData.moves.length; // Go to last move
+            }
+
+            moveIndex = Math.max(0, Math.min(moveIndex, gameData.moves.length));
+            gameData.currentMoveIndex = moveIndex;
+            updateNavigationDisplay();
+        }
+
+        function nextMove() {
+            if (gameData.currentMoveIndex < gameData.moves.length) {
+                goToMove(gameData.currentMoveIndex + 1);
+            }
+        }
+
+        function previousMove() {
+            if (gameData.currentMoveIndex > 0) {
+                goToMove(gameData.currentMoveIndex - 1);
+            }
+        }
+
+        // LLM analysis function (now optional and separate from navigation)
         async function analyzePgnFile() {
+            console.log('=== Starting LLM Analysis ===');
             const fileInput = document.getElementById('pgnFileInput');
             const question = document.getElementById('pgnQuestionInput').value.trim();
             const analyzeBtn = document.getElementById('analyzePgnBtn');
             const analysisContent = document.querySelector('#analysis-tab .analysis-content');
             const debugContent = document.querySelector('#debug-tab .debug-log');
 
-            if (!fileInput.files || fileInput.files.length === 0) {
-                alert('Please select a PGN file');
+            if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                console.error('No file selected');
+                alert('Please upload a PGN file first');
                 return;
             }
 
             const file = fileInput.files[0];
+            console.log('Running AI analysis on:', file.name);
 
             // Update UI for loading state
-            analyzeBtn.disabled = true;
-            analyzeBtn.innerHTML = '<div class="spinner"></div>Analyzing Game...';
+            if (analyzeBtn) {
+                analyzeBtn.disabled = true;
+                analyzeBtn.innerHTML = '<div class="spinner"></div>AI Analyzing...';
+            }
 
-            analysisContent.innerHTML = '<div class="loading"><div class="spinner"></div>AI is analyzing the chess game...</div>';
-            debugContent.innerHTML = '<div class="loading"><div class="spinner"></div>Loading debug information...</div>';
+            if (analysisContent) {
+                analysisContent.innerHTML = '<div class="loading"><div class="spinner"></div>🤖 AI is analyzing the chess game... (Navigation still works!)</div>';
+            }
+            if (debugContent) {
+                debugContent.innerHTML = '<div class="loading"><div class="spinner"></div>Loading AI analysis debug information...</div>';
+            }
 
             try {
                 const formData = new FormData();
@@ -801,31 +1290,60 @@
                     body: formData
                 });
 
+                console.log('AI Analysis response:', response.status, response.statusText);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
                 const result = await response.json();
+                console.log('AI Analysis result:', result.success ? 'Success' : 'Failed');
 
                 if (result.success) {
-                    // Display analysis (convert markdown to HTML)
-                    analysisContent.innerHTML = marked.parse(result.analysis || 'No analysis returned.');
-
-                    // Update board to show final position
-                    if (result.board_fen) {
-                        updateBoardFromFEN(result.board_fen);
+                    console.log('Displaying AI analysis results...');
+                    if (analysisContent) {
+                        analysisContent.innerHTML = marked.parse(result.analysis || 'No analysis returned.');
                     }
 
                     // Display debug log
-                    debugContent.innerHTML = formatDebugLog(result.debug_log || []);
+                    if (debugContent) {
+                        debugContent.innerHTML = formatDebugLog(result.debug_log || []);
+                    }
                 } else {
-                    analysisContent.innerHTML = `<div class="error">❌ Analysis failed: ${result.error}</div>`;
-                    debugContent.innerHTML = `<div class="error">❌ Error: ${result.error}</div>`;
+                    console.error('AI Analysis failed:', result.error);
+                    if (analysisContent) {
+                        analysisContent.innerHTML = `
+                            <div class="error">❌ AI Analysis failed: ${result.error}</div>
+                            <div style="margin-top: 20px; padding: 15px; background: rgba(139, 69, 19, 0.1); border-radius: 8px;">
+                                <p><strong>Note:</strong> Game navigation is still available below the board!</p>
+                            </div>
+                        `;
+                    }
+                    if (debugContent) {
+                        debugContent.innerHTML = `<div class="error">❌ Error: ${result.error}</div>`;
+                    }
                 }
 
             } catch (error) {
-                analysisContent.innerHTML = `<div class="error">❌ Network error: ${error.message}</div>`;
-                debugContent.innerHTML = `<div class="error">❌ Network error: ${error.message}</div>`;
+                console.error('AI Analysis error:', error);
+                if (analysisContent) {
+                    analysisContent.innerHTML = `
+                        <div class="error">❌ Network error: ${error.message}</div>
+                        <div style="margin-top: 20px; padding: 15px; background: rgba(139, 69, 19, 0.1); border-radius: 8px;">
+                            <p><strong>Note:</strong> Game navigation is still available below the board!</p>
+                        </div>
+                    `;
+                }
+                if (debugContent) {
+                    debugContent.innerHTML = `<div class="error">❌ Network error: ${error.message}</div>`;
+                }
             } finally {
                 // Reset button
-                analyzeBtn.disabled = false;
-                analyzeBtn.innerHTML = '🔍 Analyze Game';
+                if (analyzeBtn) {
+                    analyzeBtn.disabled = false;
+                    analyzeBtn.innerHTML = '🤖 Get AI Analysis';
+                }
+                console.log('=== LLM Analysis Complete ===');
             }
         }
 
@@ -973,6 +1491,44 @@
                 analyzePgnFile();
             }
         });
+
+        // Global keyboard shortcuts for game navigation
+        document.addEventListener('keydown', function(e) {
+            if (!gameData.isGameLoaded) return;
+
+            // Don't interfere with input fields
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                return;
+            }
+
+            switch(e.key) {
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    previousMove();
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    nextMove();
+                    break;
+                case 'Home':
+                    e.preventDefault();
+                    goToMove(0);
+                    break;
+                case 'End':
+                    e.preventDefault();
+                    goToMove(-1);
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    if (e.shiftKey) {
+                        previousMove();
+                    } else {
+                        nextMove();
+                    }
+                    break;
+            }
+        });
+
     </script>
 </body>
 </html>
