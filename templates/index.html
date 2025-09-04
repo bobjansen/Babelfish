@@ -631,6 +631,247 @@
             margin-right: 12px;
         }
 
+        /* Board Editor Styles */
+        .editor-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+
+        .editor-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .action-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .editor-btn {
+            flex: 1;
+            padding: 10px 12px;
+            border: 2px solid #d2691e;
+            border-radius: 6px;
+            background: linear-gradient(145deg, #f5f5dc 0%, #e8e5d0 100%);
+            color: #654321;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 13px;
+            font-family: 'Georgia', serif;
+        }
+
+        .editor-btn:hover {
+            background: linear-gradient(145deg, #e8e5d0 0%, #ddd8c7 100%);
+            transform: translateY(-1px);
+        }
+
+        .clear-btn-editor:hover {
+            background: linear-gradient(145deg, #f44336 0%, #d32f2f 100%);
+            color: white;
+            border-color: #b71c1c;
+        }
+
+        .piece-palette {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid #d2691e;
+            border-radius: 12px;
+            padding: 15px;
+        }
+
+        .piece-palette h4 {
+            margin-bottom: 12px;
+            color: #8b4513;
+            font-family: 'Georgia', serif;
+            text-align: center;
+        }
+
+        .palette-section {
+            margin-bottom: 12px;
+        }
+
+        .piece-label {
+            display: inline-block;
+            width: 50px;
+            font-weight: 600;
+            color: #654321;
+            font-size: 13px;
+            margin-bottom: 5px;
+        }
+
+        .piece-row {
+            display: flex;
+            gap: 6px;
+            margin-left: 10px;
+        }
+
+        .palette-piece {
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(145deg, #ffffff 0%, #f0f0f0 100%);
+            border: 2px solid #8b4513;
+            border-radius: 10px;
+            cursor: grab;
+            font-size: 28px;
+            transition: all 0.3s ease;
+            user-select: none;
+            position: relative;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        .palette-piece:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(139, 69, 19, 0.4);
+            z-index: 10;
+            background: linear-gradient(145deg, #ffffff 0%, #f8f8f8 100%);
+            border-color: #654321;
+        }
+
+        .palette-piece:active {
+            cursor: grabbing;
+            transform: scale(1.05);
+        }
+
+        /* Black pieces styling - make text black, keep white background */
+        .black-piece {
+            color: #000000 !important;
+            background: linear-gradient(145deg, #ffffff 0%, #f0f0f0 100%);
+            text-shadow: none;
+        }
+
+        .black-piece:hover {
+            background: linear-gradient(145deg, #ffffff 0%, #f8f8f8 100%);
+        }
+
+        /* White pieces styling - clean and crisp */
+        .palette-piece[data-piece^="w"] {
+            color: #000000;
+            background: linear-gradient(145deg, #ffffff 0%, #f0f0f0 100%);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        .palette-piece[data-piece^="w"]:hover {
+            background: linear-gradient(145deg, #ffffff 0%, #f8f8f8 100%);
+        }
+
+        .position-settings {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid #d2691e;
+            border-radius: 12px;
+            padding: 15px;
+        }
+
+        .position-settings h4 {
+            margin-bottom: 12px;
+            color: #8b4513;
+            font-family: 'Georgia', serif;
+            text-align: center;
+        }
+
+        .settings-row {
+            margin-bottom: 12px;
+        }
+
+        .settings-row label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            color: #654321;
+        }
+
+        .settings-row span {
+            min-width: 60px;
+        }
+
+        .settings-row select {
+            padding: 8px;
+            border: 2px solid #d2691e;
+            border-radius: 6px;
+            background: #f5f5dc;
+            color: #654321;
+            font-family: 'Georgia', serif;
+        }
+
+        .castling-checkboxes {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .castling-checkboxes label {
+            font-size: 12px;
+            font-weight: normal;
+        }
+
+        .current-fen {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid #d2691e;
+            border-radius: 12px;
+            padding: 15px;
+        }
+
+        .current-fen label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #8b4513;
+        }
+
+        .current-fen textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #d2691e;
+            border-radius: 6px;
+            background: #f5f5dc;
+            color: #654321;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            resize: none;
+        }
+
+        .current-fen textarea:focus {
+            outline: none;
+            border-color: #8b4513;
+        }
+
+        /* Board highlighting for edit mode */
+        .board-square-highlight {
+            background-color: rgba(139, 69, 19, 0.2) !important;
+        }
+
+        .board-drag-over {
+            background-color: rgba(76, 175, 80, 0.4) !important;
+            border: 2px dashed #4caf50 !important;
+            box-sizing: border-box;
+        }
+
+        .board-error {
+            background-color: rgba(244, 67, 54, 0.3) !important;
+        }
+
+        /* Enhance dragging visual feedback */
+        .palette-piece.dragging {
+            opacity: 0.5;
+            transform: scale(0.8);
+        }
+
+        #myBoard .piece-417db.dragging {
+            opacity: 0.5 !important;
+        }
+
+        /* Better hover states for board in edit mode */
+        .board-edit-mode .square-55d63:hover {
+            background-color: rgba(139, 69, 19, 0.1) !important;
+        }
+
         @media (max-width: 1024px) {
             .container {
                 grid-template-columns: 1fr;
@@ -692,6 +933,7 @@
                 <div class="input-tabs">
                     <button class="input-tab active" onclick="showInputTab('fen')">📝 FEN Position</button>
                     <button class="input-tab" onclick="showInputTab('pgn')">📄 PGN File</button>
+                    <button class="input-tab" onclick="showInputTab('editor')">✏️ Board Editor</button>
                 </div>
 
                 <!-- FEN Input Tab -->
@@ -730,6 +972,92 @@
                     <button class="analyze-btn" id="analyzePgnBtn" onclick="analyzePgnFile()">
                         🤖 Get AI Analysis
                     </button>
+                </div>
+
+                <!-- Board Editor Tab -->
+                <div id="editor-input" class="input-tab-content">
+                    <div class="editor-controls">
+                        <!-- Piece Palette -->
+                        <div class="piece-palette">
+                            <h4>Drag pieces to board</h4>
+                            <div class="palette-section">
+                                <span class="piece-label">White:</span>
+                                <div class="piece-row">
+                                    <div class="palette-piece" data-piece="wK">♔</div>
+                                    <div class="palette-piece" data-piece="wQ">♕</div>
+                                    <div class="palette-piece" data-piece="wR">♖</div>
+                                    <div class="palette-piece" data-piece="wB">♗</div>
+                                    <div class="palette-piece" data-piece="wN">♘</div>
+                                    <div class="palette-piece" data-piece="wP">♙</div>
+                                </div>
+                            </div>
+                            <div class="palette-section">
+                                <span class="piece-label">Black:</span>
+                                <div class="piece-row">
+                                    <div class="palette-piece black-piece" data-piece="bK">♚</div>
+                                    <div class="palette-piece black-piece" data-piece="bQ">♛</div>
+                                    <div class="palette-piece black-piece" data-piece="bR">♜</div>
+                                    <div class="palette-piece black-piece" data-piece="bB">♝</div>
+                                    <div class="palette-piece black-piece" data-piece="bN">♞</div>
+                                    <div class="palette-piece black-piece" data-piece="bP">♟</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="editor-actions">
+                            <div class="action-row">
+                                <button class="editor-btn clear-btn-editor" onclick="clearBoard()">
+                                    🗑️ Clear Board
+                                </button>
+                                <button class="editor-btn" onclick="setupStartingPosition()">
+                                    🏁 Starting Position
+                                </button>
+                            </div>
+
+                            <div class="action-row">
+                                <button class="editor-btn" onclick="flipBoard()">
+                                    🔄 Flip Board
+                                </button>
+                                <button class="editor-btn" onclick="copyFEN()">
+                                    📋 Copy FEN
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Position Settings -->
+                        <div class="position-settings">
+                            <h4>Position Settings</h4>
+                            <div class="settings-row">
+                                <label>
+                                    <span>Turn:</span>
+                                    <select id="turnSelect">
+                                        <option value="w">White to move</option>
+                                        <option value="b">Black to move</option>
+                                    </select>
+                                </label>
+                            </div>
+                            <div class="settings-row">
+                                <label>
+                                    <span>Castling Rights:</span>
+                                    <div class="castling-checkboxes">
+                                        <label><input type="checkbox" id="whiteKingSide" checked> White O-O</label>
+                                        <label><input type="checkbox" id="whiteQueenSide" checked> White O-O-O</label>
+                                        <label><input type="checkbox" id="blackKingSide" checked> Black O-O</label>
+                                        <label><input type="checkbox" id="blackQueenSide" checked> Black O-O-O</label>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="current-fen">
+                            <label for="editorFenOutput">Current FEN:</label>
+                            <textarea id="editorFenOutput" rows="3" readonly onclick="this.select()"></textarea>
+                        </div>
+
+                        <button class="analyze-btn" id="analyzeEditorBtn" onclick="analyzeEditorPosition()">
+                            🔍 Analyze Position
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -820,6 +1148,20 @@
             isGameLoaded: false
         };
 
+        // Board editor state
+        let boardEditor = {
+            isEditMode: false,
+            draggedPiece: null,
+            currentPosition: {},
+            turn: 'w',
+            castlingRights: {
+                whiteKingSide: true,
+                whiteQueenSide: true,
+                blackKingSide: true,
+                blackQueenSide: true
+            }
+        };
+
         // Function to update board and validate FEN
         function updateBoardFromFEN(fen) {
             if (!window.board) return; // Board not initialized yet
@@ -901,6 +1243,9 @@
             // Hide navigation panel when switching to FEN mode
             if (tabName === 'fen') {
                 hideNavigationPanel();
+            } else if (tabName === 'editor') {
+                hideNavigationPanel();
+                setupBoardEditor();
             }
 
             currentInputTab = tabName;
@@ -1528,6 +1873,418 @@
                     break;
             }
         });
+
+        // ===== BOARD EDITOR FUNCTIONALITY =====
+
+        function setupBoardEditor() {
+            console.log('Setting up board editor...');
+
+            // Always enable editing when in board editor
+            boardEditor.isEditMode = true;
+
+            // Initialize editor with current board position or starting position
+            if (window.board) {
+                const currentPos = window.board.position();
+                // If board is empty or default, start with starting position
+                if (Object.keys(currentPos).length === 0 || JSON.stringify(currentPos) === JSON.stringify({})) {
+                    loadPositionFromFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+                } else {
+                    boardEditor.currentPosition = {...currentPos};
+                }
+
+                updateEditorFEN();
+                setupPaletteDragAndDrop();
+                setupEditorControls();
+
+                // Small delay to ensure board is ready, then set up editing
+                setTimeout(() => {
+                    setupBoardDropZones();
+                    // Force an initial sync after everything is set up
+                    setTimeout(() => {
+                        syncBoardWithPosition();
+                    }, 100);
+                }, 200);
+            }
+        }
+
+
+        function setupPaletteDragAndDrop() {
+            const palettepieces = document.querySelectorAll('.palette-piece');
+
+            palettepieces.forEach(piece => {
+                piece.draggable = true;
+
+                piece.addEventListener('dragstart', function(e) {
+                    if (!boardEditor.isEditMode) {
+                        e.preventDefault();
+                        return;
+                    }
+
+                    boardEditor.draggedPiece = this.dataset.piece;
+                    e.dataTransfer.effectAllowed = 'copy';
+                    e.dataTransfer.setData('text/plain', this.dataset.piece);
+
+                    // Add visual feedback
+                    this.classList.add('dragging');
+
+                    console.log('Dragging piece from palette:', boardEditor.draggedPiece);
+                });
+
+                piece.addEventListener('dragend', function(e) {
+                    this.classList.remove('dragging');
+                    // Don't clear draggedPiece here, let the drop handler do it
+                    setTimeout(() => {
+                        boardEditor.draggedPiece = null;
+                    }, 100);
+                });
+            });
+        }
+
+        function setupBoardDropZones() {
+            // Don't recreate the board, just reconfigure it
+            if (!window.board) return;
+
+            // Reconfigure the existing board for edit mode
+            window.board.destroy();
+            window.board = Chessboard('myBoard', {
+                draggable: true, // Always allow dragging in editor
+                dropOffBoard: 'trash', // Allow dropping pieces off board to remove them
+                position: boardEditor.currentPosition,
+                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+                onDragStart: function(source, piece, position, orientation) {
+                    if (!boardEditor.isEditMode) return false;
+                    console.log('Board drag start:', source, piece);
+                    // Clear any dragged piece from palette
+                    boardEditor.draggedPiece = null;
+                    return true; // Allow all drags in edit mode
+                },
+                onDrop: function(source, target, piece, newPos, oldPos, orientation) {
+                    if (!boardEditor.isEditMode) return 'snapback';
+
+                    console.log('Board drop:', source, '->', target, piece);
+
+                    // Handle dropping piece off board (remove it)
+                    if (target === 'offboard') {
+                        console.log('Removing piece:', piece, 'from', source);
+                        delete boardEditor.currentPosition[source];
+                        updateEditorFEN();
+                        return 'trash';
+                    }
+
+                    // Handle normal moves on board
+                    boardEditor.currentPosition = {...newPos};
+                    updateEditorFEN();
+                    return;
+                },
+                onSnapEnd: function() {
+                    if (boardEditor.isEditMode) {
+                        // Ensure our position is synced after any move
+                        const currentPos = window.board.position();
+                        boardEditor.currentPosition = {...currentPos};
+                        updateEditorFEN();
+
+                        // Small delay then force another sync to ensure consistency
+                        setTimeout(() => {
+                            syncBoardWithPosition();
+                        }, 50);
+                    }
+                }
+            });
+
+            // Add drop event listeners to board squares for palette pieces
+            setTimeout(() => {
+                setupPaletteDropZones();
+            }, 500);
+        }
+
+        function setupPaletteDropZones() {
+            const boardElement = document.querySelector('#myBoard');
+            if (!boardElement) return;
+
+            const squares = boardElement.querySelectorAll('.square-55d63');
+            console.log(`Setting up drop zones for ${squares.length} squares`);
+
+            squares.forEach(square => {
+                // Remove existing listeners first
+                square.removeEventListener('dragover', handleSquareDragOver);
+                square.removeEventListener('dragleave', handleSquareDragLeave);
+                square.removeEventListener('drop', handleSquareDrop);
+
+                // Add new listeners
+                square.addEventListener('dragover', handleSquareDragOver);
+                square.addEventListener('dragleave', handleSquareDragLeave);
+                square.addEventListener('drop', handleSquareDrop);
+            });
+        }
+
+        function handleSquareDragOver(e) {
+            if (!boardEditor.isEditMode || !boardEditor.draggedPiece) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+            this.classList.add('board-drag-over');
+        }
+
+        function handleSquareDragLeave(e) {
+            this.classList.remove('board-drag-over');
+        }
+
+        function handleSquareDrop(e) {
+            if (!boardEditor.isEditMode) return;
+            e.preventDefault();
+            this.classList.remove('board-drag-over');
+
+            if (boardEditor.draggedPiece) {
+                // Extract square name from classes
+                const classes = Array.from(this.classList);
+                const squareClass = classes.find(cls => cls.match(/square-[a-h][1-8]/));
+
+                if (squareClass) {
+                    const square = squareClass.split('-')[1];
+                    console.log('Dropping', boardEditor.draggedPiece, 'on', square);
+
+                    // Update our position tracking
+                    boardEditor.currentPosition[square] = boardEditor.draggedPiece;
+
+                    // Force immediate board update with animation
+                    window.board.position(boardEditor.currentPosition, true);
+
+                    // Update FEN display
+                    updateEditorFEN();
+
+                    // Clear the dragged piece
+                    boardEditor.draggedPiece = null;
+
+                    // Force another update after a small delay to ensure it sticks
+                    setTimeout(() => {
+                        if (boardEditor.isEditMode) {
+                            window.board.position(boardEditor.currentPosition, false);
+                        }
+                    }, 100);
+
+                    console.log('Board updated with new position:', boardEditor.currentPosition);
+                }
+            }
+        }
+
+        function setupEditorControls() {
+            // Setup castling and turn controls
+            const turnSelect = document.getElementById('turnSelect');
+            const castlingCheckboxes = ['whiteKingSide', 'whiteQueenSide', 'blackKingSide', 'blackQueenSide'];
+
+            if (turnSelect) {
+                turnSelect.addEventListener('change', function() {
+                    boardEditor.turn = this.value;
+                    updateEditorFEN();
+                });
+            }
+
+            castlingCheckboxes.forEach(id => {
+                const checkbox = document.getElementById(id);
+                if (checkbox) {
+                    checkbox.addEventListener('change', function() {
+                        boardEditor.castlingRights[id] = this.checked;
+                        updateEditorFEN();
+                    });
+                }
+            });
+        }
+
+        function clearBoard() {
+            boardEditor.currentPosition = {};
+            if (window.board) {
+                window.board.clear();
+            }
+            updateEditorFEN();
+            console.log('Board cleared');
+        }
+
+        function setupStartingPosition() {
+            const startFen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+            loadPositionFromFEN(startFen);
+            console.log('Starting position set');
+        }
+
+        function flipBoard() {
+            if (window.board) {
+                window.board.flip();
+            }
+            console.log('Board flipped');
+        }
+
+        function copyFEN() {
+            const fen = generateFENFromEditor();
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(fen).then(() => {
+                    console.log('FEN copied to clipboard:', fen);
+                    // Show brief feedback
+                    const btn = event.target;
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = '✅ Copied!';
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                    }, 1500);
+                }).catch(err => {
+                    console.error('Failed to copy FEN:', err);
+                });
+            } else {
+                // Fallback: select the FEN text
+                const fenOutput = document.getElementById('editorFenOutput');
+                if (fenOutput) {
+                    fenOutput.select();
+                    document.execCommand('copy');
+                }
+            }
+        }
+
+        function updateEditorFEN() {
+            const fen = generateFENFromEditor();
+            const fenOutput = document.getElementById('editorFenOutput');
+            if (fenOutput) {
+                fenOutput.value = fen;
+            }
+        }
+
+        function syncBoardWithPosition() {
+            if (window.board && boardEditor.isEditMode) {
+                console.log('Syncing board with position:', boardEditor.currentPosition);
+                window.board.position(boardEditor.currentPosition, false); // No animation for sync
+                updateEditorFEN();
+            }
+        }
+
+        function generateFENFromEditor() {
+            // Convert current position to FEN notation
+            let fen = '';
+
+            // Build board position (8 ranks from 8 to 1)
+            for (let rank = 8; rank >= 1; rank--) {
+                let rankStr = '';
+                let emptyCount = 0;
+
+                for (let file = 'a'; file <= 'h'; file = String.fromCharCode(file.charCodeAt(0) + 1)) {
+                    const square = file + rank;
+                    const piece = boardEditor.currentPosition[square];
+
+                    if (piece) {
+                        if (emptyCount > 0) {
+                            rankStr += emptyCount;
+                            emptyCount = 0;
+                        }
+                        // Convert piece notation (wK -> K, bK -> k)
+                        const pieceChar = piece.charAt(1);
+                        rankStr += piece.charAt(0) === 'w' ? pieceChar.toUpperCase() : pieceChar.toLowerCase();
+                    } else {
+                        emptyCount++;
+                    }
+                }
+
+                if (emptyCount > 0) {
+                    rankStr += emptyCount;
+                }
+
+                fen += rankStr;
+                if (rank > 1) fen += '/';
+            }
+
+            // Add turn
+            fen += ' ' + boardEditor.turn;
+
+            // Add castling rights
+            let castling = '';
+            if (boardEditor.castlingRights.whiteKingSide) castling += 'K';
+            if (boardEditor.castlingRights.whiteQueenSide) castling += 'Q';
+            if (boardEditor.castlingRights.blackKingSide) castling += 'k';
+            if (boardEditor.castlingRights.blackQueenSide) castling += 'q';
+            fen += ' ' + (castling || '-');
+
+            // Add en passant (always - for now, could be enhanced)
+            fen += ' -';
+
+            // Add halfmove and fullmove counters
+            fen += ' 0 1';
+
+            return fen;
+        }
+
+        function loadPositionFromFEN(fen) {
+            try {
+                // Parse FEN and update editor state
+                const parts = fen.split(' ');
+                if (parts.length >= 2) {
+                    // Parse position
+                    const position = {};
+                    const ranks = parts[0].split('/');
+
+                    for (let i = 0; i < 8; i++) {
+                        const rank = 8 - i;
+                        const rankStr = ranks[i];
+                        let file = 0;
+
+                        for (let char of rankStr) {
+                            if (char >= '1' && char <= '8') {
+                                file += parseInt(char);
+                            } else {
+                                const square = String.fromCharCode('a'.charCodeAt(0) + file) + rank;
+                                const color = char === char.toUpperCase() ? 'w' : 'b';
+                                position[square] = color + char.toUpperCase();
+                                file++;
+                            }
+                        }
+                    }
+
+                    boardEditor.currentPosition = position;
+                    boardEditor.turn = parts[1] || 'w';
+
+                    // Parse castling rights
+                    const castling = parts[2] || 'KQkq';
+                    boardEditor.castlingRights = {
+                        whiteKingSide: castling.includes('K'),
+                        whiteQueenSide: castling.includes('Q'),
+                        blackKingSide: castling.includes('k'),
+                        blackQueenSide: castling.includes('q')
+                    };
+
+                    // Update UI
+                    if (window.board) {
+                        window.board.position(boardEditor.currentPosition);
+                    }
+
+                    // Update form controls
+                    const turnSelect = document.getElementById('turnSelect');
+                    if (turnSelect) turnSelect.value = boardEditor.turn;
+
+                    Object.keys(boardEditor.castlingRights).forEach(key => {
+                        const checkbox = document.getElementById(key);
+                        if (checkbox) checkbox.checked = boardEditor.castlingRights[key];
+                    });
+
+                    updateEditorFEN();
+                    console.log('Position loaded from FEN:', fen);
+                }
+            } catch (e) {
+                console.error('Error loading FEN:', e);
+            }
+        }
+
+        function analyzeEditorPosition() {
+            const fen = generateFENFromEditor();
+
+            // Validate FEN with chess.js
+            if (typeof Chess !== 'undefined') {
+                const tempGame = new Chess();
+                if (!tempGame.load(fen)) {
+                    alert('Invalid position! Please ensure both kings are on the board and the position is legal.');
+                    return;
+                }
+            }
+
+            // Switch to FEN tab and analyze
+            document.getElementById('fenInput').value = fen;
+            showInputTab('fen');
+
+            // Trigger analysis
+            analyzePosition();
+        }
 
     </script>
 </body>
