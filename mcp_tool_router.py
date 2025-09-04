@@ -52,6 +52,7 @@ class MCPToolRouter:
             "analyze_endgame": self._analyze_endgame,
             "visualize_board": self._visualize_board,
             "validate_move_choice": self._validate_move_choice,
+            "apply_moves": self._apply_moves,
         }
 
     def call_tool(self, tool_name: str, arguments: Dict[str, Any]):
@@ -544,7 +545,7 @@ class MCPToolRouter:
 
 **❌ CRITICAL:** The played move {move} is absent from the engine's analysis, indicating it's likely:
 - A tactical error that loses material/position
-- Missing a much stronger continuation  
+- Missing a much stronger continuation
 - Allowing opponent counterplay that could have been avoided
 - Not considering the engine's preferred plans{refutation_text}
 
@@ -619,7 +620,7 @@ class MCPToolRouter:
                     formatted_response += f"""
 
 **⚠️ MISTAKE:** This move loses {best_move_loss/100:.1f} pawns - significantly inferior to best play
-**❌ INCORRECT CHOICE:** {move} misses better opportunities  
+**❌ INCORRECT CHOICE:** {move} misses better opportunities
 **✅ MUCH BETTER:** {best_move} (improves position by {best_move_loss/100:.1f} pawns)
 **📊 STRONG RECOMMENDATION:** Prefer {best_move} over {move} in this position"""
                 elif move_quality == "Inaccuracy":
@@ -840,5 +841,111 @@ class MCPToolRouter:
                 TextContent(
                     type="text",
                     text=f"❌ Error validating move: {str(e)}",
+                )
+            ]
+
+    def _apply_moves(self, arguments: Dict[str, Any]) -> List[TextContent]:
+        """Apply moves to a FEN position to get the correct resulting FEN."""
+        try:
+            starting_fen = arguments.get("starting_fen")
+            moves = arguments.get("moves", [])
+            show_progression = arguments.get("show_progression", False)
+
+            if not starting_fen:
+                return [
+                    TextContent(
+                        type="text", text="❌ Error: Starting FEN position is required"
+                    )
+                ]
+
+            if not moves:
+                return [
+                    TextContent(type="text", text="❌ Error: Moves list is required")
+                ]
+
+            import chess
+
+            try:
+                board = chess.Board(starting_fen)
+            except ValueError as e:
+                return [
+                    TextContent(
+                        type="text", text=f"❌ Error: Invalid starting FEN: {str(e)}"
+                    )
+                ]
+
+            applied_moves = []
+            position_progression = []
+
+            if show_progression:
+                position_progression.append(
+                    {"move_number": 0, "fen": starting_fen, "move": "Starting position"}
+                )
+
+            for i, move_san in enumerate(moves, 1):
+                try:
+                    # Parse and apply the move
+                    move = board.parse_san(move_san)
+                    board.push(move)
+                    applied_moves.append(move_san)
+
+                    if show_progression:
+                        position_progression.append(
+                            {"move_number": i, "fen": board.fen(), "move": move_san}
+                        )
+
+                except ValueError:
+                    # Invalid move
+                    return [
+                        TextContent(
+                            type="text",
+                            text=f"❌ Error: Invalid move '{move_san}' at position {i}. Move is not legal in the current position. Applied moves so far: {applied_moves}. Current FEN: {board.fen()}",
+                        )
+                    ]
+
+            final_fen = board.fen()
+
+            formatted_response = f"""🐟 **Move Application Result**
+
+**Starting Position:** {starting_fen}
+**Moves Applied:** {' '.join(applied_moves)}
+**Final Position:** {final_fen}
+
+**Move Sequence:**"""
+
+            if show_progression:
+                for pos in position_progression:
+                    if pos["move_number"] == 0:
+                        formatted_response += f"\n• **Start:** {pos['fen']}"
+                    else:
+                        move_display = (
+                            f"{(pos['move_number'] + 1) // 2}."
+                            if pos["move_number"] % 2 == 1
+                            else ""
+                        )
+                        if pos["move_number"] % 2 == 1:
+                            move_display += f" {pos['move']}"
+                        else:
+                            move_display += f" {pos['move']}"
+                        formatted_response += f"\n• **{move_display}** → {pos['fen']}"
+            else:
+                formatted_response += (
+                    f"\n• Successfully applied {len(applied_moves)} moves"
+                )
+                formatted_response += (
+                    "\n• Use show_progression=true to see intermediate positions"
+                )
+
+            formatted_response += (
+                "\n\n**✅ Success:** All moves were legal and applied correctly."
+            )
+
+            return [TextContent(type="text", text=formatted_response)]
+
+        except Exception as e:
+            return [
+                TextContent(
+                    type="text",
+                    text=f"❌ Error applying moves: {str(e)}",
                 )
             ]

@@ -4,6 +4,7 @@
 import os
 import json
 import time
+import requests
 import chess.pgn
 import io
 import re
@@ -17,6 +18,9 @@ from mcp_tools import MCP_TOOLS
 from mcp_tool_router import MCPToolRouter
 
 app = Flask(__name__)
+
+# Global MCP router instance for follow-up analysis
+mcp_router = MCPToolRouter()
 
 
 @dataclass
@@ -48,13 +52,71 @@ class WebChessAnalyzer:
         debug_log = []
 
         try:
-            # Prepare the analysis request
+            # Pre-analyze the position with engine to save AI tool calls
+            debug_log.append(
+                {
+                    "type": "engine_preanalysis",
+                    "content": "Auto-analyzing position with engine before AI",
+                    "timestamp": time.time(),
+                }
+            )
+
+            # Get basic position analysis
+            position_analysis = self.tool_router.call_tool(
+                "analyze_position", {"fen": fen, "depth": 20}
+            )
+            position_data = ""
+            if (
+                isinstance(position_analysis, dict)
+                and position_analysis.get("status") == "success"
+            ):
+                position_data = position_analysis.get("message", "")
+
+            # Get principal variation
+            pv_analysis = self.tool_router.call_tool(
+                "get_principal_variation", {"fen": fen, "depth": 20, "max_moves": 8}
+            )
+            pv_data = ""
+            if isinstance(pv_analysis, dict) and pv_analysis.get("status") == "success":
+                pv_data = pv_analysis.get("message", "")
+
+            # Get board visualization
+            board_visual = self.tool_router.call_tool("visualize_board", {"fen": fen})
+            visual_data = ""
+            if (
+                isinstance(board_visual, dict)
+                and board_visual.get("status") == "success"
+            ):
+                visual_data = board_visual.get("message", "")
+
+            debug_log.append(
+                {
+                    "type": "engine_preanalysis_complete",
+                    "position_analysis": position_analysis,
+                    "pv_analysis": pv_analysis,
+                    "board_visual": board_visual,
+                    "timestamp": time.time(),
+                }
+            )
+
+            # Prepare the analysis request with engine data
+            engine_context = f"""**ENGINE ANALYSIS PROVIDED:**
+
+**BOARD VISUALIZATION:**
+{visual_data}
+
+**POSITION EVALUATION:**
+{position_data}
+
+**PRINCIPAL VARIATION:**
+{pv_data}
+
+Based on this engine analysis and board visualization, please provide your chess coaching insights."""
+
             if user_question:
-                user_message = f"Analyze this chess position: {fen}\n\nSpecific question: {user_question}"
+                user_message = f"Analyze this chess position: {fen}\n\nSpecific question: {user_question}\n\n{engine_context}"
             else:
-                user_message = (
-                    f"Provide a comprehensive analysis of this chess position: {fen}"
-                )
+                user_message = f"Provide a comprehensive analysis of this chess position: {fen}\n\n{engine_context}"
 
             # Create conversation with enhanced system prompt
             messages = [
@@ -585,10 +647,12 @@ Please analyze:
         return """You are Babelfish, an expert chess coach with powerful analysis tools.
 
 CRITICAL INSTRUCTIONS FOR WEB INTERFACE:
-1. You MUST use tools to analyze positions before making statements
-2. Always visualize the board when discussing piece interactions
-3. Provide analysis in clear, well-structured markdown format
-4. Clearly separate your final analysis with a markdown header
+1. Engine analysis is PRE-PROVIDED in the user message - use it as your foundation
+2. You may call additional tools for specific questions, but basic position analysis is already done
+3. Focus on human insights, teaching, and strategic explanation rather than recalculating engine data
+4. Always visualize the board when discussing piece interactions
+5. Provide analysis in clear, well-structured markdown format
+6. Clearly separate your final analysis with a markdown header
 
 WEB OUTPUT FORMAT:
 Structure your response exactly like this:
@@ -727,6 +791,215 @@ def analyze_pgn():
             "error": result.error_message,
         }
     )
+
+
+@app.route("/analyze_followup", methods=["POST"])
+def analyze_followup():
+    """Handle follow-up questions about a chess position."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"success": False, "error": "No data provided"})
+
+        question = data.get("question", "").strip()
+        context = data.get("context", {})
+        conversation_history = data.get("conversation_history", [])
+
+        if not question:
+            return jsonify({"success": False, "error": "No question provided"})
+
+        if not context or not context.get("fen"):
+            return jsonify({"success": False, "error": "No analysis context available"})
+
+        # Build conversation context for the AI
+        context_prompt = f"""You are continuing a chess analysis conversation about this position:
+
+**Position FEN:** {context['fen']}
+
+**Previous Analysis:**
+{context.get('analysis', 'No previous analysis available')}
+
+**Recent conversation:**"""
+
+        for msg in conversation_history[-4:]:  # Last 4 messages for context
+            role = msg.get("role", "unknown")
+            content = msg.get("content", "")
+            context_prompt += f"\n{role.title()}: {content}"
+
+        context_prompt += f"""
+
+**Current Question:** {question}
+
+Please provide a focused answer to the user's question about this chess position. Use the chess analysis tools if needed to get current engine data. Be conversational and helpful."""
+
+        # Get API key from environment
+        api_key = os.getenv("OPENROUTER_API_KEY")
+        if not api_key:
+            return jsonify(
+                {
+                    "success": False,
+                    "error": "OPENROUTER_API_KEY environment variable not set",
+                }
+            )
+
+        # Convert MCP tools to OpenRouter format
+        converter = MCPToolConverter()
+        openrouter_tools = converter.convert_mcp_tools_to_openai(MCP_TOOLS)
+
+        # Use the same analysis flow as the main analysis
+        debug_log = []
+        messages = [
+            {
+                "role": "system",
+                "content": """You are a chess coach providing follow-up analysis. Use the available chess tools to answer questions accurately.
+
+CRITICAL: When analyzing specific moves or variations:
+1. NEVER manually calculate new FEN positions - this leads to errors
+2. ALWAYS use the 'apply_moves' tool to play moves from a FEN position and get the correct resulting FEN
+3. If asked about "what if [move]" or "after [move]", use apply_moves to get the new position, then analyze it
+4. Use visualize_board to see positions after moves are played
+5. The apply_moves tool takes: starting_fen and moves array (e.g., ["Nf3", "Nc6"])
+6. Trust the engine tools rather than manual calculation
+
+Example workflow for "what if Nf3?":
+1. Use apply_moves with starting_fen and moves: ["Nf3"]
+2. Get the resulting FEN from apply_moves
+3. Use analyze_position or visualize_board on the new FEN
+4. Provide analysis of the resulting position
+
+Your chess tools can handle move sequences and position analysis accurately - use them!""",
+            },
+            {"role": "user", "content": context_prompt},
+        ]
+
+        response_text = ""
+        max_iterations = 10
+
+        for iteration in range(max_iterations):
+            # Get AI response
+            openrouter_response = requests.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": "anthropic/claude-3.5-sonnet",
+                    "messages": messages,
+                    "tools": openrouter_tools,
+                    "tool_choice": "auto",
+                    "max_tokens": 4000,
+                },
+            )
+
+            if not openrouter_response.ok:
+                error_msg = f"OpenRouter API error: {openrouter_response.status_code}"
+                return jsonify({"success": False, "error": error_msg})
+
+            completion_data = openrouter_response.json()
+            message = completion_data["choices"][0]["message"]
+            finish_reason = completion_data["choices"][0]["finish_reason"]
+
+            # Add AI response to debug log
+            debug_log.append(
+                {
+                    "type": "ai_response",
+                    "content": message.get("content", ""),
+                    "finish_reason": finish_reason,
+                    "tool_calls": message.get("tool_calls", []),
+                    "timestamp": time.time(),
+                }
+            )
+
+            # Add assistant message to conversation
+            tool_calls = message.get("tool_calls", [])
+            content = message.get("content", "")
+
+            assistant_msg = {"role": "assistant", "content": content}
+            if tool_calls:
+                assistant_msg["tool_calls"] = tool_calls
+            messages.append(assistant_msg)
+
+            # If no tool calls, we're done
+            if not tool_calls:
+                response_text = content
+                break
+
+            # Execute tool calls (same logic as main analysis)
+            for tool_call in tool_calls:
+                try:
+                    function_info = tool_call.get("function", {})
+                    tool_name = function_info.get("name", "")
+                    arguments_str = function_info.get("arguments", "{}")
+                    tool_call_id = tool_call.get("id", "unknown")
+
+                    debug_log.append(
+                        {
+                            "type": "tool_call",
+                            "tool_name": tool_name,
+                            "arguments": arguments_str,
+                            "timestamp": time.time(),
+                        }
+                    )
+
+                    try:
+                        arguments = json.loads(arguments_str)
+                    except json.JSONDecodeError:
+                        arguments = {}
+
+                    # Execute tool
+                    if hasattr(mcp_router, "call_tool"):
+                        tool_result = mcp_router.call_tool(tool_name, arguments)
+                    else:
+                        tool_result = {"error": "MCP router not available"}
+
+                    debug_log.append(
+                        {
+                            "type": "tool_result",
+                            "tool_name": tool_name,
+                            "result": tool_result,
+                            "timestamp": time.time(),
+                        }
+                    )
+
+                    # Add tool result to conversation
+                    if isinstance(tool_result, dict) and "message" in tool_result:
+                        tool_content = tool_result["message"]
+                    else:
+                        tool_content = json.dumps(tool_result)
+
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": tool_call_id,
+                            "content": tool_content,
+                        }
+                    )
+
+                except Exception as e:
+                    debug_log.append(
+                        {
+                            "type": "tool_error",
+                            "tool_name": tool_name,
+                            "error": str(e),
+                            "timestamp": time.time(),
+                        }
+                    )
+
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": tool_call_id,
+                            "content": f"Error: {str(e)}",
+                        }
+                    )
+
+        return jsonify(
+            {"success": True, "response": response_text, "debug_log": debug_log}
+        )
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
 
 
 @app.route("/health")

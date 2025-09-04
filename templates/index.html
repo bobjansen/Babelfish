@@ -448,6 +448,156 @@
             display: block;
         }
 
+        /* Follow-up conversation styles */
+        .follow-up-section {
+            margin-top: 20px;
+            border-top: 1px solid #e0e4e7;
+            padding-top: 20px;
+        }
+
+        .follow-up-divider {
+            text-align: center;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .follow-up-divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(to right, transparent, #ddd, transparent);
+        }
+
+        .follow-up-divider span {
+            background: #f8f9fa;
+            color: #666;
+            padding: 0 15px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .conversation-history {
+            margin-bottom: 20px;
+        }
+
+        .conversation-message {
+            margin-bottom: 15px;
+            padding: 12px 15px;
+            border-radius: 8px;
+        }
+
+        .conversation-message.user {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border-left: 4px solid #2196f3;
+            margin-left: 20px;
+        }
+
+        .conversation-message.assistant {
+            background: linear-gradient(135deg, #f1f8e9 0%, #dcedc8 100%);
+            border-left: 4px solid #4caf50;
+            margin-right: 20px;
+        }
+
+        .conversation-message .message-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .conversation-message.user .message-label {
+            color: #1976d2;
+        }
+
+        .conversation-message.assistant .message-label {
+            color: #388e3c;
+        }
+
+        .follow-up-input-area {
+            margin-top: 15px;
+        }
+
+        .follow-up-input-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        #followUpInput {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e4e7;
+            border-radius: 8px;
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 60px;
+            transition: border-color 0.3s ease;
+        }
+
+        #followUpInput:focus {
+            outline: none;
+            border-color: #2196f3;
+        }
+
+        .follow-up-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .follow-up-send-btn {
+            background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .follow-up-send-btn:hover {
+            background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+            transform: translateY(-1px);
+        }
+
+        .follow-up-send-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .clear-conversation-btn {
+            background: #fff;
+            color: #666;
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .clear-conversation-btn:hover {
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .follow-up-spinner {
+            width: 16px;
+            height: 16px;
+            border-width: 2px;
+        }
+
         /* File input styling */
         .file-input {
             padding: 18px;
@@ -1077,6 +1227,29 @@
                             <p style="margin-top: 15px;">Your AI chess coach will provide deep analysis using Stockfish engine with expert human insights.</p>
                         </div>
                     </div>
+                    <div id="follow-up-section" class="follow-up-section" style="display: none;">
+                        <div class="follow-up-divider">
+                            <span>💬 Continue the conversation</span>
+                        </div>
+                        <div class="conversation-history" id="conversation-history"></div>
+                        <div class="follow-up-input-area">
+                            <div class="follow-up-input-container">
+                                <textarea
+                                    id="followUpInput"
+                                    placeholder="Ask a follow-up question about this position (e.g., 'What if I play Nf3 instead?' or 'How should Black respond?')"
+                                    rows="3"></textarea>
+                                <div class="follow-up-actions">
+                                    <button id="sendFollowUpBtn" class="follow-up-send-btn">
+                                        <span>Send</span>
+                                        <div class="spinner follow-up-spinner" style="display: none;"></div>
+                                    </button>
+                                    <button id="clearConversationBtn" class="clear-conversation-btn" title="Clear conversation history">
+                                        🗑️ Clear
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div id="debug-tab" class="tab-pane">
@@ -1130,6 +1303,7 @@
                 // Initialize file input functionality with slight delay
                 setTimeout(function() {
                     setupFileInput();
+                    setupFollowUpConversation();
                 }, 500);
             } catch (e) {
                 console.error('Error initializing board:', e);
@@ -1265,6 +1439,160 @@
                     clearFENError(); // Clear any previous validation errors
                 }
             }
+        }
+
+        // Follow-up conversation functionality
+        let conversationHistory = [];
+        let currentAnalysisContext = null;
+
+        function setupFollowUpConversation() {
+            const followUpInput = document.getElementById('followUpInput');
+            const sendBtn = document.getElementById('sendFollowUpBtn');
+            const clearBtn = document.getElementById('clearConversationBtn');
+
+            if (!followUpInput || !sendBtn || !clearBtn) {
+                console.warn('Follow-up conversation elements not found');
+                return;
+            }
+
+            // Send button click handler
+            sendBtn.addEventListener('click', handleFollowUpSubmit);
+
+            // Enter key handler for textarea
+            followUpInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    handleFollowUpSubmit();
+                }
+            });
+
+            // Clear conversation handler
+            clearBtn.addEventListener('click', function() {
+                clearConversationHistory();
+            });
+        }
+
+        async function handleFollowUpSubmit() {
+            const followUpInput = document.getElementById('followUpInput');
+            const question = followUpInput.value.trim();
+
+            if (!question) return;
+            if (!currentAnalysisContext) {
+                alert('Please run an initial analysis first before asking follow-up questions.');
+                return;
+            }
+
+            // Add user message to conversation
+            addConversationMessage('user', question);
+            followUpInput.value = '';
+
+            // Show loading state
+            setFollowUpLoading(true);
+
+            try {
+                // Send follow-up request with context
+                const response = await fetch('/analyze_followup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        question: question,
+                        context: currentAnalysisContext,
+                        conversation_history: conversationHistory.slice(-6) // Last 6 messages for context
+                    }),
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    addConversationMessage('assistant', result.response);
+
+                    // Append follow-up debug info to debug tab
+                    if (result.debug_log && result.debug_log.length > 0) {
+                        appendToDebugLog(result.debug_log, 'Follow-up Analysis');
+                    }
+                } else {
+                    addConversationMessage('assistant', `❌ Error: ${result.error}`);
+                }
+            } catch (error) {
+                console.error('Follow-up request error:', error);
+                addConversationMessage('assistant', '❌ Network error occurred. Please try again.');
+            } finally {
+                setFollowUpLoading(false);
+            }
+        }
+
+        function addConversationMessage(role, content) {
+            const conversationHistoryDiv = document.getElementById('conversation-history');
+            if (!conversationHistoryDiv) return;
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `conversation-message ${role}`;
+
+            const labelDiv = document.createElement('div');
+            labelDiv.className = 'message-label';
+            labelDiv.textContent = role === 'user' ? 'You' : 'Babelfish';
+
+            const contentDiv = document.createElement('div');
+            contentDiv.innerHTML = formatMarkdown(content);
+
+            messageDiv.appendChild(labelDiv);
+            messageDiv.appendChild(contentDiv);
+            conversationHistoryDiv.appendChild(messageDiv);
+
+            // Store in history array
+            conversationHistory.push({ role, content });
+
+            // Scroll to bottom
+            conversationHistoryDiv.scrollTop = conversationHistoryDiv.scrollHeight;
+        }
+
+        function clearConversationHistory() {
+            conversationHistory.length = 0;
+            const historyDiv = document.getElementById('conversation-history');
+            if (historyDiv) {
+                historyDiv.innerHTML = '';
+            }
+        }
+
+        function setFollowUpLoading(loading) {
+            const sendBtn = document.getElementById('sendFollowUpBtn');
+            const spinner = sendBtn.querySelector('.follow-up-spinner');
+            const span = sendBtn.querySelector('span');
+
+            if (loading) {
+                sendBtn.disabled = true;
+                spinner.style.display = 'block';
+                span.textContent = 'Thinking...';
+            } else {
+                sendBtn.disabled = false;
+                spinner.style.display = 'none';
+                span.textContent = 'Send';
+            }
+        }
+
+        function showFollowUpSection() {
+            const followUpSection = document.getElementById('follow-up-section');
+            if (followUpSection) {
+                followUpSection.style.display = 'block';
+            }
+        }
+
+        function hideFollowUpSection() {
+            const followUpSection = document.getElementById('follow-up-section');
+            if (followUpSection) {
+                followUpSection.style.display = 'none';
+            }
+        }
+
+        // Simple markdown formatting for conversation messages
+        function formatMarkdown(text) {
+            return text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/`(.*?)`/g, '<code>$1</code>')
+                .replace(/\n/g, '<br>');
         }
 
         // File handling functions
@@ -1777,6 +2105,17 @@
 
                     // Display debug log
                     debugContent.innerHTML = formatDebugLog(result.debug_log || []);
+
+                    // Set up follow-up conversation context
+                    currentAnalysisContext = {
+                        fen: fen,
+                        analysis: result.analysis,
+                        debug_log: result.debug_log,
+                        timestamp: new Date().toISOString()
+                    };
+
+                    // Show follow-up section
+                    showFollowUpSection();
                 } else {
                     analysisContent.innerHTML = `<div class="error">❌ Analysis failed: ${result.error}</div>`;
                     debugContent.innerHTML = `<div class="error">❌ Error: ${result.error}</div>`;
@@ -1832,6 +2171,61 @@
             });
 
             return html;
+        }
+
+        // Append debug entries to existing debug log
+        function appendToDebugLog(debugEntries, sectionTitle) {
+            const debugContent = document.querySelector('#debug-tab .debug-log');
+            if (!debugContent || !debugEntries || debugEntries.length === 0) {
+                return;
+            }
+
+            // If debug log is empty (showing the initial placeholder), replace it
+            const hasContent = debugContent.innerHTML.includes('debug-entry');
+
+            if (!hasContent) {
+                // Replace placeholder with new content
+                debugContent.innerHTML = '';
+            }
+
+            // Add section header for follow-up
+            const sectionHeader = document.createElement('div');
+            sectionHeader.style.cssText = 'padding: 15px 0 10px; border-top: 2px solid #d2691e; margin-top: 20px; font-weight: bold; color: #8b4513; font-size: 16px;';
+            sectionHeader.textContent = `🔄 ${sectionTitle}`;
+            debugContent.appendChild(sectionHeader);
+
+            // Add debug entries
+            debugEntries.forEach((entry, index) => {
+                const timestamp = new Date(entry.timestamp * 1000).toLocaleTimeString();
+
+                const entryDiv = document.createElement('div');
+                entryDiv.className = `debug-entry ${entry.type}`;
+
+                let entryHtml = `<div class="debug-timestamp">${timestamp} - ${entry.type.toUpperCase()}</div>`;
+
+                if (entry.content) {
+                    entryHtml += `<div>${escapeHtml(entry.content).substring(0, 500)}</div>`;
+                }
+                if (entry.tool_name) {
+                    entryHtml += `<div><strong>Tool:</strong> ${entry.tool_name}</div>`;
+                }
+                if (entry.arguments) {
+                    entryHtml += `<div><strong>Arguments:</strong> <code>${typeof entry.arguments === 'string' ? entry.arguments : JSON.stringify(entry.arguments)}</code></div>`;
+                }
+                if (entry.result) {
+                    const resultStr = typeof entry.result === 'string' ? entry.result : JSON.stringify(entry.result);
+                    entryHtml += `<div><strong>Result:</strong> ${escapeHtml(resultStr).substring(0, 300)}${resultStr.length > 300 ? '...' : ''}</div>`;
+                }
+                if (entry.error) {
+                    entryHtml += `<div style="color: red;"><strong>Error:</strong> ${escapeHtml(entry.error)}</div>`;
+                }
+
+                entryDiv.innerHTML = entryHtml;
+                debugContent.appendChild(entryDiv);
+            });
+
+            // Scroll to bottom of debug log
+            debugContent.scrollTop = debugContent.scrollHeight;
         }
 
         function escapeHtml(text) {

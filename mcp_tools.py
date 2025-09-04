@@ -231,4 +231,30 @@ MCP_TOOLS = [
             "required": ["fen", "move"],
         },
     ),
+    Tool(
+        name="apply_moves",
+        description="CRITICAL TOOL: Apply moves to a FEN position to get the correct resulting FEN. Takes a starting FEN and list of moves in algebraic notation, validates each move's legality, and returns the accurate final position. ALWAYS use this tool instead of trying to calculate FEN positions manually - chess position calculation is extremely error-prone and leads to incorrect analysis. This tool is essential for accurate move sequences and position analysis.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "starting_fen": {
+                    "type": "string",
+                    "description": "The starting chess position in FEN notation",
+                },
+                "moves": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of moves to apply in standard algebraic notation (e.g., ['e4', 'e5', 'Nf3', 'Nc6']). Each move will be validated and applied sequentially.",
+                    "minItems": 1,
+                    "maxItems": 30,
+                },
+                "show_progression": {
+                    "type": "boolean",
+                    "description": "Whether to show the position after each move (default: false, only shows final position)",
+                    "default": False,
+                },
+            },
+            "required": ["starting_fen", "moves"],
+        },
+    ),
 ]
