@@ -152,8 +152,8 @@ class WebChessAnalyzer:
                                 "type": "tool_result",
                                 "tool_name": tool_name,
                                 "result": (
-                                    result[:500] + "..."
-                                    if len(result) > 500
+                                    result[:1000] + "..."
+                                    if len(result) > 1000
                                     else result
                                 ),
                                 "timestamp": time.time(),
