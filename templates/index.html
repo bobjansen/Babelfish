@@ -2189,12 +2189,25 @@
             // Add turn
             fen += ' ' + boardEditor.turn;
 
-            // Add castling rights
+            // Add castling rights (but only if actually possible)
             let castling = '';
-            if (boardEditor.castlingRights.whiteKingSide) castling += 'K';
-            if (boardEditor.castlingRights.whiteQueenSide) castling += 'Q';
-            if (boardEditor.castlingRights.blackKingSide) castling += 'k';
-            if (boardEditor.castlingRights.blackQueenSide) castling += 'q';
+
+            // Check if white king and rooks are in starting positions
+            const whiteKingOnStart = boardEditor.currentPosition['e1'] === 'wK';
+            const whiteKingsideRook = boardEditor.currentPosition['h1'] === 'wR';
+            const whiteQueensideRook = boardEditor.currentPosition['a1'] === 'wR';
+
+            // Check if black king and rooks are in starting positions
+            const blackKingOnStart = boardEditor.currentPosition['e8'] === 'bK';
+            const blackKingsideRook = boardEditor.currentPosition['h8'] === 'bR';
+            const blackQueensideRook = boardEditor.currentPosition['a8'] === 'bR';
+
+            // Only add castling rights if the pieces are actually in position
+            if (boardEditor.castlingRights.whiteKingSide && whiteKingOnStart && whiteKingsideRook) castling += 'K';
+            if (boardEditor.castlingRights.whiteQueenSide && whiteKingOnStart && whiteQueensideRook) castling += 'Q';
+            if (boardEditor.castlingRights.blackKingSide && blackKingOnStart && blackKingsideRook) castling += 'k';
+            if (boardEditor.castlingRights.blackQueenSide && blackKingOnStart && blackQueensideRook) castling += 'q';
+
             fen += ' ' + (castling || '-');
 
             // Add en passant (always - for now, could be enhanced)
