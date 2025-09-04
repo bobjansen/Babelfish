@@ -1232,6 +1232,12 @@
 
         // Input tab switching
         function showInputTab(tabName) {
+            // If switching away from board editor, sync FEN to the FEN tab
+            const currentActiveTab = document.querySelector('.input-tab-content.active');
+            if (currentActiveTab && currentActiveTab.id === 'editor-input' && tabName !== 'editor') {
+                syncBoardEditorToFENTab();
+            }
+
             // Update tab buttons
             document.querySelectorAll('.input-tab').forEach(tab => tab.classList.remove('active'));
             event.target.classList.add('active');
@@ -1247,8 +1253,18 @@
                 hideNavigationPanel();
                 setupBoardEditor();
             }
+        }
 
-            currentInputTab = tabName;
+        // Sync board editor FEN to FEN tab input
+        function syncBoardEditorToFENTab() {
+            if (boardEditor && boardEditor.currentPosition) {
+                const generatedFEN = generateFENFromEditor();
+                const fenInput = document.getElementById('fenInput');
+                if (fenInput && generatedFEN) {
+                    fenInput.value = generatedFEN;
+                    clearFENError(); // Clear any previous validation errors
+                }
+            }
         }
 
         // File handling functions
