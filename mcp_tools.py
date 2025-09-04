@@ -199,4 +199,36 @@ MCP_TOOLS = [
             "required": ["fen"],
         },
     ),
+    Tool(
+        name="validate_move_choice",
+        description="CRITICAL VALIDATION: Determines if a move is among Stockfish's top recommendations. Use this to validate any move suggestions - if a move is NOT in the top recommendations, it should be considered INCORRECT.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "fen": {
+                    "type": "string",
+                    "description": "The chess position in FEN notation",
+                },
+                "move": {
+                    "type": "string",
+                    "description": "The move to validate in standard algebraic notation",
+                },
+                "top_n": {
+                    "type": "integer",
+                    "description": "Check if move is in top N engine recommendations (default: 3)",
+                    "default": 3,
+                    "minimum": 1,
+                    "maximum": 10,
+                },
+                "depth": {
+                    "type": "integer",
+                    "description": "Engine analysis depth (default: 22)",
+                    "default": 22,
+                    "minimum": 15,
+                    "maximum": 25,
+                },
+            },
+            "required": ["fen", "move"],
+        },
+    ),
 ]

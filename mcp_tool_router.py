@@ -51,6 +51,7 @@ class MCPToolRouter:
             "evaluate_move_quality": self._evaluate_move_quality,
             "analyze_endgame": self._analyze_endgame,
             "visualize_board": self._visualize_board,
+            "validate_move_choice": self._validate_move_choice,
         }
 
     def call_tool(self, tool_name: str, arguments: Dict[str, Any]):
@@ -452,13 +453,105 @@ class MCPToolRouter:
                 try:
                     board = chess.Board(fen)
                     board.parse_san(move)  # Just validate the move
-                    # Move is legal but not in top moves - it's probably very bad
-                    return [
-                        TextContent(
-                            type="text",
-                            text=f"⚠️ Move '{move}' is legal but not among the engine's top moves (likely very poor move)",
+
+                    # Move is legal but not in top moves - show what engine recommends instead
+                    eval_before = analysis_before["evaluation"]
+                    best_move = analysis_before["best_move"]
+                    best_moves_text = []
+
+                    for i, move_info in enumerate(analysis_before["top_moves"][:3], 1):
+                        move_san = move_info["Move"]
+                        centipawn = move_info.get("Centipawn")
+                        cp_text = (
+                            f"{centipawn/100:+.1f}" if centipawn is not None else "N/A"
                         )
-                    ]
+                        best_moves_text.append(f"{i}. {move_san} ({cp_text})")
+
+                    eval_text = ""
+                    if eval_before["type"] == "cp":
+                        eval_text = f"{eval_before['value']/100:+.1f} pawns"
+                    elif eval_before["type"] == "mate":
+                        moves = eval_before["value"]
+                        side = "White" if moves > 0 else "Black"
+                        eval_text = f"Mate in {abs(moves)} for {side}"
+
+                    # Analyze what happens after the poor move
+                    try:
+                        board_after = chess.Board(fen)
+                        board_after.push(board_after.parse_san(move))
+                        fen_after = board_after.fen()
+
+                        # Get analysis of position after the poor move
+                        analysis_after = self.chess_analyzer.analyze_position(
+                            fen_after, min(depth, 20)
+                        )
+                        eval_after = analysis_after["evaluation"]
+
+                        # Format the evaluation after the move
+                        if eval_after["type"] == "cp":
+                            eval_after_text = f"{eval_after['value']/100:+.1f} pawns"
+                        elif eval_after["type"] == "mate":
+                            moves = eval_after["value"]
+                            side = "White" if moves > 0 else "Black"
+                            eval_after_text = f"Mate in {abs(moves)} for {side}"
+                        else:
+                            eval_after_text = "Unknown"
+
+                        # Get opponent's best response
+                        opponent_best = analysis_after.get("best_move", "Unknown")
+
+                        # Get the critical continuation after the opponent's best response
+                        try:
+                            pv_result = self.chess_analyzer.get_principal_variation(
+                                fen_after, min(depth, 20), 5
+                            )
+                            critical_line = (
+                                " ".join(pv_result["pv_moves"][:10])
+                                if pv_result["pv_moves"]
+                                else "Unable to calculate"
+                            )
+                        except:
+                            critical_line = "Unable to calculate"
+
+                        refutation_text = f"""
+
+**🔥 REFUTATION ANALYSIS:**
+**After {move}:** {eval_after_text}
+**Opponent's Best Response:** {opponent_best}
+**Critical Continuation:** {critical_line}
+**Evaluation Swing:** From {eval_text} to {eval_after_text}"""
+
+                        # Show why this is devastating if evaluation changed significantly
+                        if eval_before["type"] == "cp" and eval_after["type"] == "cp":
+                            swing = abs(eval_after["value"] - eval_before["value"])
+                            if swing > 200:  # More than 2 pawns swing
+                                refutation_text += f"""
+**Impact:** This move causes a massive {swing/100:.1f} pawn evaluation swing - turning the game around!"""
+                    except:
+                        refutation_text = "\n\n**Note:** Unable to analyze the position after this move."
+
+                    formatted_response = f"""🐟 **Move Quality Evaluation**
+
+**Position:** {fen}
+**Move Played:** {move}
+
+**🚨 STRONG WARNING:** This move is NOT in Stockfish's top recommendations - it should be considered INCORRECT or SIGNIFICANTLY INFERIOR to the engine's suggestions.
+
+**Current Position Evaluation:** {eval_text}
+
+**🎯 ONLY THESE MOVES ARE RECOMMENDED:**
+{chr(10).join(best_moves_text)}
+
+**❌ CRITICAL:** The played move {move} is absent from the engine's analysis, indicating it's likely:
+- A tactical error that loses material/position
+- Missing a much stronger continuation  
+- Allowing opponent counterplay that could have been avoided
+- Not considering the engine's preferred plans{refutation_text}
+
+**⚡ IMPERATIVE:** Use {best_move} or one of the other engine recommendations. The played move {move} should be rejected unless there are exceptional circumstances not visible to the engine."""
+
+                    return [TextContent(type="text", text=formatted_response)]
+
                 except:
                     return [
                         TextContent(
@@ -511,14 +604,24 @@ class MCPToolRouter:
 **Before Move:** {eval_before_cp/100:+.1f} pawns
 **After Move:** {eval_move_cp/100:+.1f} pawns
 
-**Best Move:** {best_move}  
+**Best Move:** {best_move}
 **Best Move Would Give:** {best_move_eval/100:+.1f} pawns
 **Loss vs Best Move:** {best_move_loss/100:.1f} pawns"""
 
-                if move_quality in ["Blunder", "Mistake"]:
-                    formatted_response += (
-                        f"\n\n**Improvement:** Consider {best_move} instead"
-                    )
+                if move_quality == "Blunder":
+                    formatted_response += f"""
+
+**🚨 BLUNDER ALERT:** This move loses {best_move_loss/100:.1f} pawns compared to the best option!
+**❌ CRITICAL ERROR:** Do NOT play {move} - it's a serious tactical mistake
+**✅ ONLY CORRECT MOVE:** {best_move} (gains {best_move_loss/100:.1f} pawns over the played move)
+**⚡ IMPERATIVE:** The played move must be rejected - only {best_move} maintains the position"""
+                elif move_quality == "Mistake":
+                    formatted_response += f"""
+
+**⚠️ MISTAKE:** This move loses {best_move_loss/100:.1f} pawns - significantly inferior to best play
+**❌ INCORRECT CHOICE:** {move} misses better opportunities  
+**✅ MUCH BETTER:** {best_move} (improves position by {best_move_loss/100:.1f} pawns)
+**📊 STRONG RECOMMENDATION:** Prefer {best_move} over {move} in this position"""
                 elif move_quality == "Inaccuracy":
                     formatted_response += (
                         f"\n\n**Note:** {best_move} would be slightly better"
@@ -657,3 +760,85 @@ class MCPToolRouter:
     def _visualize_board(self, arguments: Dict[str, Any]) -> List[TextContent]:
         """Generate ASCII visualization of a chess board position using shared implementation."""
         return visualize_board_mcp_tool(arguments)
+
+    def _validate_move_choice(self, arguments: Dict[str, Any]) -> List[TextContent]:
+        """Validate if a move is among the engine's top recommendations."""
+        try:
+            fen = arguments.get("fen")
+            move = arguments.get("move")
+            top_n = arguments.get("top_n", 3)
+            depth = arguments.get("depth", 22)
+
+            if not fen or not move:
+                return [
+                    TextContent(
+                        type="text", text="❌ Error: FEN position and move are required"
+                    )
+                ]
+
+            # Analyze the position
+            analysis = self.chess_analyzer.analyze_position(fen, depth)
+
+            # Check if move is in top N recommendations
+            move_found = False
+            move_rank = None
+            move_eval = None
+
+            for i, move_info in enumerate(analysis["top_moves"][:top_n], 1):
+                if move_info["Move"] == move:
+                    move_found = True
+                    move_rank = i
+                    move_eval = move_info.get("Centipawn")
+                    break
+
+            # Get the top recommendations for comparison
+            top_moves_text = []
+            for i, move_info in enumerate(analysis["top_moves"][:top_n], 1):
+                move_san = move_info["Move"]
+                centipawn = move_info.get("Centipawn")
+                cp_text = f"{centipawn/100:+.1f}" if centipawn is not None else "N/A"
+                marker = "✅" if move_san == move else "🎯"
+                top_moves_text.append(f"{marker} {i}. {move_san} ({cp_text})")
+
+            if move_found:
+                eval_text = f"{move_eval/100:+.1f}" if move_eval is not None else "N/A"
+                formatted_response = f"""🐟 **Move Validation Result**
+
+**Position:** {fen}
+**Move Tested:** {move}
+
+**✅ VALIDATION STATUS:** APPROVED - Move is #{move_rank} of top {top_n} engine recommendations
+
+**Move Evaluation:** {eval_text} pawns
+**Rank in Engine Analysis:** #{move_rank} out of top {top_n}
+
+**Engine's Top {top_n} Recommendations:**
+{chr(10).join(top_moves_text)}
+
+**✅ CONCLUSION:** {move} is a legitimate engine-approved choice (rank #{move_rank}). This move can be confidently recommended."""
+
+            else:
+                best_move = analysis.get("best_move", "Unknown")
+                formatted_response = f"""🐟 **Move Validation Result**
+
+**Position:** {fen}
+**Move Tested:** {move}
+
+**❌ VALIDATION STATUS:** REJECTED - Move is NOT in top {top_n} engine recommendations
+
+**🚨 CRITICAL WARNING:** The move {move} is absent from Stockfish's top {top_n} choices at depth {depth}
+
+**🎯 Engine's Top {top_n} Recommendations:**
+{chr(10).join(top_moves_text)}
+
+**❌ CONCLUSION:** {move} should be considered INCORRECT. Only the moves listed above are engine-approved choices. Use {best_move} or another top recommendation instead."""
+
+            return [TextContent(type="text", text=formatted_response)]
+
+        except Exception as e:
+            return [
+                TextContent(
+                    type="text",
+                    text=f"❌ Error validating move: {str(e)}",
+                )
+            ]
