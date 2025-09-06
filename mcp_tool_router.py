@@ -5,6 +5,7 @@ MCP Tool Router - Chess Analysis Tool Dispatch
 import logging
 import traceback
 from typing import Dict, Any, Callable, List
+import chess
 from mcp.types import TextContent
 from mcp_tools import MCP_TOOLS
 from babelfish.chess_analyzer import ChessAnalyzer
@@ -430,7 +431,7 @@ class MCPToolRouter:
         try:
             fen = arguments.get("fen")
             move = arguments.get("move")
-            depth = arguments.get("depth", 20)
+            depth = arguments.get("depth", 22)
 
             if not fen or not move:
                 return [
@@ -454,8 +455,6 @@ class MCPToolRouter:
 
             if not move_found:
                 # Move not in top moves, might be legal but bad - try to validate it
-                import chess
-
                 try:
                     board = chess.Board(fen)
                     board.parse_san(move)  # Just validate the move
@@ -677,8 +676,6 @@ class MCPToolRouter:
                 ]
 
             # Count pieces to determine if it's an endgame
-            import chess
-
             board = chess.Board(fen)
             piece_count = len([p for p in board.piece_map().values()])
 
@@ -868,8 +865,6 @@ class MCPToolRouter:
                     TextContent(type="text", text="❌ Error: Moves list is required")
                 ]
 
-            import chess
-
             try:
                 board = chess.Board(starting_fen)
             except ValueError as e:
@@ -999,8 +994,6 @@ class MCPToolRouter:
                 # Get the principal variation for this move
                 try:
                     # Apply the move to get the new position
-                    import chess
-
                     board = chess.Board(fen)
                     move_obj = board.parse_san(move)
                     board.push(move_obj)

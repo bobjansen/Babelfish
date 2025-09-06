@@ -197,7 +197,9 @@ class ChessAnalyzer:
 
         return analyses
 
-    def get_position_explanation(self, fen: str, analysis: Dict = None, depth: int = 15) -> str:
+    def get_position_explanation(
+        self, fen: str, analysis: Dict = None, depth: int = 15
+    ) -> str:
         """Get a human-readable explanation of the position.
 
         Args:
