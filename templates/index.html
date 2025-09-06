@@ -1384,9 +1384,12 @@
             // Chess board setup
             try {
                 window.board = Chessboard('myBoard', {
-                    draggable: false,
+                    draggable: true,
                     position: 'start',
-                    pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
+                    pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+                    onDragStart: onDragStart,
+                    onDrop: onDrop,
+                    onSnapEnd: onSnapEnd
                 });
                 console.log('Board initialized successfully');
 
@@ -1422,6 +1425,9 @@
         let currentTab = 'analysis';
         let currentInputTab = 'fen';
 
+        // Chess game state for FEN tab
+        let fenChessGame = null;
+
         // Game navigation state
         let gameData = {
             moves: [],
@@ -1452,6 +1458,10 @@
             if (!fen || fen.trim() === '') {
                 window.board.position('start');
                 clearFENError();
+                // Reset chess game to starting position
+                if (typeof Chess !== 'undefined') {
+                    fenChessGame = new Chess();
+                }
                 return;
             }
 
@@ -1466,6 +1476,9 @@
                     if (isValid) {
                         window.board.position(fen);
                         clearFENError();
+                        // Update the chess game state to match the new FEN
+                        fenChessGame = new Chess();
+                        fenChessGame.load(fen);
                     } else {
                         showFENError('Invalid FEN notation');
                     }
@@ -1510,6 +1523,73 @@
             const errorDiv = document.getElementById('fen-error');
             if (errorDiv) {
                 errorDiv.remove();
+            }
+        }
+
+        // Chess board event handlers for FEN tab
+        function onDragStart(source, piece, position, orientation) {
+            // Only allow dragging when in FEN tab and not in board editor mode
+            if (currentInputTab !== 'fen' || boardEditor.isEditMode) {
+                return false;
+            }
+
+            // Initialize chess game if not already done
+            if (!fenChessGame && typeof Chess !== 'undefined') {
+                fenChessGame = new Chess();
+                const fenInput = document.getElementById('fenInput');
+                if (fenInput && fenInput.value.trim()) {
+                    try {
+                        fenChessGame.load(fenInput.value.trim());
+                    } catch (e) {
+                        console.error('Error loading FEN for game:', e);
+                        return false;
+                    }
+                }
+            }
+
+            if (!fenChessGame) return false;
+
+            // Only allow dragging pieces of the current player's turn
+            if ((fenChessGame.turn() === 'w' && piece.search(/^b/) !== -1) ||
+                (fenChessGame.turn() === 'b' && piece.search(/^w/) !== -1)) {
+                return false;
+            }
+
+            return true;
+        }
+
+        function onDrop(source, target, piece, newPos, oldPos, orientation) {
+            // Only handle drops in FEN tab and not in board editor mode
+            if (currentInputTab !== 'fen' || boardEditor.isEditMode) {
+                return 'snapback';
+            }
+
+            if (!fenChessGame) return 'snapback';
+
+            // Try to make the move
+            const move = fenChessGame.move({
+                from: source,
+                to: target,
+                promotion: 'q' // Always promote to queen for simplicity
+            });
+
+            // If the move is invalid, snap back
+            if (move === null) {
+                return 'snapback';
+            }
+
+            // Update the FEN input with the new position
+            const fenInput = document.getElementById('fenInput');
+            if (fenInput) {
+                fenInput.value = fenChessGame.fen();
+                clearFENError();
+            }
+        }
+
+        function onSnapEnd() {
+            // Sync board position with chess game state when in FEN tab
+            if (currentInputTab === 'fen' && fenChessGame && !boardEditor.isEditMode) {
+                window.board.position(fenChessGame.fen());
             }
         }
 
