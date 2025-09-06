@@ -649,6 +649,101 @@
             background: #d32f2f;
         }
 
+        /* Engine Lines Panel Styling */
+        .engine-lines-panel {
+            margin-bottom: 20px;
+            background: linear-gradient(145deg, #f8f8f0 0%, #ece8d5 100%);
+            border: 2px solid #a0522d;
+            border-radius: 10px;
+            padding: 12px;
+            box-shadow: inset 0 2px 4px rgba(160, 82, 45, 0.1);
+        }
+
+        .engine-lines-header {
+            text-align: center;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #a0522d;
+            padding-bottom: 8px;
+        }
+
+        .engine-lines-header h4 {
+            color: #8b4513;
+            font-size: 14px;
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .engine-line {
+            display: flex;
+            align-items: center;
+            padding: 6px 8px;
+            margin-bottom: 4px;
+            background: rgba(160, 82, 45, 0.05);
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .engine-line:hover {
+            background: rgba(160, 82, 45, 0.1);
+        }
+
+        .line-number {
+            color: #8b4513;
+            font-weight: bold;
+            min-width: 20px;
+            margin-right: 8px;
+        }
+
+        .line-moves {
+            flex: 1;
+            color: #654321;
+            margin-right: 8px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: help;
+            position: relative;
+        }
+
+        .line-eval {
+            color: #2e7d32;
+            font-weight: bold;
+            min-width: 50px;
+            text-align: right;
+        }
+
+        .line-eval.negative {
+            color: #d32f2f;
+        }
+
+        /* Simple tooltip styling */
+        .engine-tooltip {
+            position: absolute;
+            background-color: #2b2b2b;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-family: 'Courier New', monospace;
+            white-space: nowrap;
+            z-index: 10000;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            pointer-events: none;
+            max-width: 500px;
+            word-break: break-all;
+        }
+
+        .engine-tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 20px;
+            border: 5px solid transparent;
+            border-top-color: #2b2b2b;
+        }
+
         /* Navigation Panel Styling */
         .navigation-panel {
             margin-bottom: 25px;
@@ -1049,6 +1144,20 @@
 
             <div class="board-container">
                 <div id="myBoard" style="width: 350px"></div>
+            </div>
+
+            <!-- Engine Lines Panel -->
+            <div class="engine-lines-panel" id="engineLinesPanel" style="display: none;">
+                <div class="engine-lines-header">
+                    <h4>🔍 Engine Lines</h4>
+                </div>
+                <div class="engine-lines-content" id="engineLinesContent">
+                    <div class="engine-line">
+                        <span class="line-number">1.</span>
+                        <span class="line-moves">e4 e5 Nf3 Nc6</span>
+                        <span class="line-eval">+0.25</span>
+                    </div>
+                </div>
             </div>
 
             <!-- Game Navigation Controls -->
@@ -2114,6 +2223,9 @@
                     // Display debug log
                     debugContent.innerHTML = formatDebugLog(result.debug_log || []);
 
+                    // Display engine lines in sidebar
+                    displayEngineLines(result.engine_lines || []);
+
                     // Set up follow-up conversation context
                     currentAnalysisContext = {
                         fen: fen,
@@ -2179,6 +2291,82 @@
             });
 
             return html;
+        }
+
+        // Display engine lines in the sidebar
+        function displayEngineLines(engineLines) {
+            const engineLinesPanel = document.getElementById('engineLinesPanel');
+            const engineLinesContent = document.getElementById('engineLinesContent');
+
+            if (!engineLines || engineLines.length === 0) {
+                engineLinesPanel.style.display = 'none';
+                return;
+            }
+
+            // Show the panel
+            engineLinesPanel.style.display = 'block';
+
+            // Clear existing content
+            engineLinesContent.innerHTML = '';
+
+            // Add each engine line
+            engineLines.forEach(line => {
+                const lineDiv = document.createElement('div');
+                lineDiv.className = 'engine-line';
+
+                const evalValue = parseFloat(line.eval);
+                const evalClass = evalValue < 0 ? 'negative' : '';
+
+                lineDiv.innerHTML = `
+                    <span class="line-number">${line.number}.</span>
+                    <span class="line-moves" title="${line.moves}">
+                        ${line.moves}
+                    </span>
+                    <span class="line-eval ${evalClass}">${line.eval}</span>
+                `;
+
+                // Add hover event listeners for custom tooltip
+                const movesSpan = lineDiv.querySelector('.line-moves');
+                movesSpan.addEventListener('mouseenter', (e) => showEngineTooltip(e, line.moves));
+                movesSpan.addEventListener('mouseleave', hideEngineTooltip);
+                movesSpan.addEventListener('mousemove', moveEngineTooltip);
+
+                engineLinesContent.appendChild(lineDiv);
+            });
+        }
+
+        // Tooltip functions for engine lines
+        let engineTooltip = null;
+
+        function showEngineTooltip(event, fullMoves) {
+            // Remove any existing tooltip
+            hideEngineTooltip();
+
+            // Create tooltip element
+            engineTooltip = document.createElement('div');
+            engineTooltip.className = 'engine-tooltip';
+            engineTooltip.textContent = fullMoves;
+            document.body.appendChild(engineTooltip);
+
+            // Position tooltip
+            const rect = event.target.getBoundingClientRect();
+            engineTooltip.style.left = rect.left + 'px';
+            engineTooltip.style.top = (rect.top - engineTooltip.offsetHeight - 5) + 'px';
+        }
+
+        function hideEngineTooltip() {
+            if (engineTooltip) {
+                document.body.removeChild(engineTooltip);
+                engineTooltip = null;
+            }
+        }
+
+        function moveEngineTooltip(event) {
+            if (engineTooltip) {
+                const rect = event.target.getBoundingClientRect();
+                engineTooltip.style.left = rect.left + 'px';
+                engineTooltip.style.top = (rect.top - engineTooltip.offsetHeight - 5) + 'px';
+            }
         }
 
         // Append debug entries to existing debug log

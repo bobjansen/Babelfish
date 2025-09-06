@@ -61,9 +61,10 @@ class WebChessAnalyzer:
                 }
             )
 
-            # Get principal variation with higher depth and more moves (includes position analysis)
+            # Get principal variation with time limit instead of high depth for faster response
             pv_analysis = self.tool_router.call_tool(
-                "get_principal_variation", {"fen": fen, "depth": 30, "max_moves": 24}
+                "get_principal_variation",
+                {"fen": fen, "depth": 25, "max_moves": 24, "time_limit": 8.0},
             )
             pv_data = ""
             if isinstance(pv_analysis, dict) and pv_analysis.get("status") == "success":
@@ -107,16 +108,15 @@ class WebChessAnalyzer:
 **BOARD VISUALIZATION:**
 {visual_data}
 
-**POSITION EVALUATION:**
-{position_data}
-
 **PRINCIPAL VARIATION:**
 {pv_data}
 
 Based on this engine analysis and board visualization, please provide your chess coaching insights."""
 
             if user_question:
-                user_message = f"Analyze this chess position: {fen}\n\nSpecific question: {user_question}\n\n{engine_context}"
+                user_message = f"""Analyze this chess position: {fen}
+
+Specific question: {user_question}\n\n{engine_context}"""
             else:
                 user_message = f"Provide a comprehensive analysis of this chess position: {fen}\n\n{engine_context}"
 
@@ -266,6 +266,7 @@ Based on this engine analysis and board visualization, please provide your chess
                 debug_log=debug_log,
                 board_fen=fen,
                 success=True,
+                engine_lines=engine_lines,
             )
 
         except Exception as e:
@@ -644,6 +645,27 @@ Please analyze:
                 error_message=str(e),
             )
 
+    def _parse_engine_lines(self, lines_text: str) -> List[Dict[str, str]]:
+        """Parse engine lines from the tool response."""
+        lines = []
+        try:
+            # Look for lines that match the pattern: "**Line X:** moves (eval)"
+            import re
+
+            line_pattern = r"\*\*Line (\d+):\*\* (.+?) \(([+-]?\d*\.?\d+)\)"
+            matches = re.findall(line_pattern, lines_text)
+
+            for match in matches:
+                line_num, moves, eval_str = match
+                lines.append(
+                    {"number": line_num, "moves": moves.strip(), "eval": eval_str}
+                )
+        except Exception:
+            # If parsing fails, return empty list
+            pass
+
+        return lines
+
     def _get_web_system_prompt(self) -> str:
         """Get enhanced system prompt for web interface."""
         return """You are Babelfish, an expert chess coach with powerful analysis tools.
@@ -655,6 +677,30 @@ CRITICAL INSTRUCTIONS FOR WEB INTERFACE:
 4. Always visualize the board when discussing piece interactions
 5. Provide analysis in clear, well-structured markdown format
 6. Clearly separate your final analysis with a markdown header
+
+ANALYSIS START REQUIREMENTS:
+- Start IMMEDIATELY with concrete chess analysis
+- First sentence must contain specific moves or piece positions (e.g., "Black's f6 pawn creates kingside weaknesses")
+- NO meta-commentary about tools, visualizations, or engine output
+- Jump directly into position evaluation and move sequences
+
+MANDATORY ANALYSIS DEPTH REQUIREMENTS:
+You MUST provide substantial analysis, not lazy summaries. Every response must include:
+1. **Concrete move sequences** (minimum 3-5 moves with WHY each move works)
+2. **Specific tactical themes** (pins, forks, discoveries, etc.) with square references
+3. **Pawn structure analysis** (weaknesses, strengths, pawn breaks)
+4. **Piece activity assessment** (which pieces are active/passive and how to improve them)
+5. **King safety evaluation** (escape squares, potential mating nets)
+
+FORBIDDEN LAZY RESPONSES - NEVER USE THESE:
+- "The engine confirms..." (interpret what it means instead)
+- "The position shows..." (explain the specific implications)  
+- "Analysis reveals..." (provide the concrete details)
+- "The board visualization..." (users don't care - analyze the position directly)
+- "The visualization highlights..." (waste of words - get to the chess analysis)
+- "This confirms..." or "This shows..." (just state the chess facts)
+- General statements without square references or specific moves
+- Describing what pieces are highlighted (irrelevant - analyze their function instead)
 
 CHESS ANALYSIS STYLE - MANDATORY:
 Write in a concise, chess book style:
@@ -672,34 +718,32 @@ Always interpret engine evaluations to provide likely outcomes:
 - **+3.0+**: Decisive advantage, position likely wins itself
 - **Mate values**: State the forced outcome clearly
 
-ANALYSIS STRUCTURE:
-1. **Move assessment** (1-2 sentences max)
-2. **Likely outcome** (based on evaluation, 1 sentence)
-3. **Key variation** (main line only, 3-5 moves)
-4. **Strategic point** (1 sentence)
-5. **Alternative** (if relevant, 1 sentence)
+REQUIRED ANALYSIS STRUCTURE:
+1. **Position assessment** with specific piece locations and their functions
+2. **Likely outcome** based on evaluation with concrete winning/drawing plans
+3. **Main variation** (5-8 moves) with explanation of each critical move
+4. **Key tactical motifs** with square references (e.g., "Nc6 pins the d7-pawn")
+5. **Strategic themes** (space, piece activity, pawn structure) with specific examples
+6. **Critical candidate moves** for both sides with brief analysis
 
 WEB OUTPUT FORMAT:
 Structure your response like this:
 
 ## Analysis
 
-[Concise analysis in chess book style]
+Black's f6 pawn weakens the kingside, particularly the e6 and g6 squares. White's rook on a7 dominates the 7th rank, restricting Black's king to the back rank.
 
-**Outlook:** White should win with correct technique (based on +2.1 evaluation).
+**Outlook:** White wins with accurate technique. The plan involves Kg4-f5-e6, supporting the passed pawn.
 
-**Main Line:** 1.e4 e5 2.Nf3 Nc6 3.Bb5 (brief explanation)
+**Main Line:** 1.Kg4 Ra1 2.Kf5 Rf1+ 3.Ke6 Re1+ 4.Kd7 because the king escorts the pawn while avoiding back-rank checks.
 
-**Assessment:** White maintains pressure on the queenside. Black's pieces lack coordination.
+**Tactics:** The a6-pawn becomes unstoppable once the king reaches d7. Black's rook checks fail after Kc8.
 
-**Alternative:** 3...f5 deserves attention, though it weakens the kingside.
+**Strategy:** White's king-and-pawn endgame technique. Black's counterplay with f5 comes too late.
 
-AVOID:
-- Excessive formatting (emojis, bullet points, headers)
-- Emotional language ("devastating", "crushing", "brilliant")
-- Redundant explanations
-- Marketing-style enthusiasm
-- Long bullet point lists
+**Alternatives:** 1.a7 Ra2 allows perpetual check, demonstrating why king support is essential.
+
+MINIMUM WORD COUNT: 150 words of substantive chess content.
 
 TOOL USAGE:
 - ALWAYS use visualize_board before discussing piece positions
@@ -707,7 +751,7 @@ TOOL USAGE:
 - Use find_tactical_motifs for tactical analysis
 - Never make geometric claims without visual verification
 
-Your goal: Provide expert analysis in the style of classic chess literature - precise, educational, and professional."""
+Your goal: Provide expert analysis that teaches chess concepts through specific examples, not generic summaries."""
 
 
 # Flask routes
@@ -751,6 +795,7 @@ def analyze():
             "debug_log": result.debug_log,
             "board_fen": result.board_fen,
             "error": result.error_message,
+            "engine_lines": result.engine_lines,
         }
     )
 
@@ -809,6 +854,7 @@ def analyze_pgn():
             "debug_log": result.debug_log,
             "board_fen": result.board_fen,
             "error": result.error_message,
+            "engine_lines": result.engine_lines or [],
         }
     )
 

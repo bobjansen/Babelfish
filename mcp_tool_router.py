@@ -115,6 +115,7 @@ class MCPToolRouter:
         try:
             fen = arguments.get("fen")
             depth = arguments.get("depth", 20)
+            time_limit = arguments.get("time_limit")
 
             if not fen:
                 return [
@@ -122,7 +123,12 @@ class MCPToolRouter:
                 ]
 
             # Validate FEN
-            analysis = self.chess_analyzer.analyze_position(fen, depth)
+            # Use provided time limit or auto-select based on depth
+            if time_limit is None:
+                time_limit = 6.0 if depth >= 20 else 60.0
+            # Apply hard limit of 1 minute
+            time_limit = min(time_limit, 60.0)
+            analysis = self.chess_analyzer.analyze_position(fen, depth, time_limit)
             explanation = self.chess_analyzer.get_position_explanation(fen, analysis)
 
             # Create a formatted text response
@@ -242,6 +248,7 @@ class MCPToolRouter:
             fen = arguments.get("fen")
             depth = arguments.get("depth", 22)
             max_moves = arguments.get("max_moves", 10)
+            time_limit = arguments.get("time_limit")
 
             if not fen:
                 return [
@@ -249,7 +256,7 @@ class MCPToolRouter:
                 ]
 
             pv_result = self.chess_analyzer.get_principal_variation(
-                fen, depth, max_moves
+                fen, depth, max_moves, time_limit
             )
 
             formatted_response = f"""🐟 **Principal Variation Analysis**
@@ -296,13 +303,19 @@ class MCPToolRouter:
         try:
             fen = arguments.get("fen")
             depth = arguments.get("depth", 22)
+            time_limit = arguments.get("time_limit")
 
             if not fen:
                 return [
                     TextContent(type="text", text="❌ Error: FEN position is required")
                 ]
 
-            analysis = self.chess_analyzer.analyze_position(fen, depth)
+            # Use provided time limit or auto-select based on depth
+            if time_limit is None:
+                time_limit = 8.0 if depth >= 20 else 60.0
+            # Apply hard limit of 1 minute
+            time_limit = min(time_limit, 60.0)
+            analysis = self.chess_analyzer.analyze_position(fen, depth, time_limit)
             explanation = self.chess_analyzer.get_position_explanation(fen, analysis)
 
             eval_info = analysis["evaluation"]
@@ -361,13 +374,19 @@ class MCPToolRouter:
         try:
             fen = arguments.get("fen")
             depth = arguments.get("depth", 20)
+            time_limit = arguments.get("time_limit")
 
             if not fen:
                 return [
                     TextContent(type="text", text="❌ Error: FEN position is required")
                 ]
 
-            analysis = self.chess_analyzer.analyze_position(fen, depth)
+            # Use provided time limit or auto-select based on depth
+            if time_limit is None:
+                time_limit = 8.0 if depth >= 20 else 60.0
+            # Apply hard limit of 1 minute
+            time_limit = min(time_limit, 60.0)
+            analysis = self.chess_analyzer.analyze_position(fen, depth, time_limit)
 
             # Analyze top moves for tactical patterns
             tactical_moves = []
@@ -432,6 +451,7 @@ class MCPToolRouter:
             fen = arguments.get("fen")
             move = arguments.get("move")
             depth = arguments.get("depth", 22)
+            time_limit = arguments.get("time_limit")
 
             if not fen or not move:
                 return [
@@ -441,7 +461,14 @@ class MCPToolRouter:
                 ]
 
             # Analyze the position before the move
-            analysis_before = self.chess_analyzer.analyze_position(fen, depth)
+            # Use provided time limit or auto-select based on depth
+            if time_limit is None:
+                time_limit = 8.0 if depth >= 20 else 60.0
+            # Apply hard limit of 1 minute
+            time_limit = min(time_limit, 60.0)
+            analysis_before = self.chess_analyzer.analyze_position(
+                fen, depth, time_limit
+            )
 
             # Find the move in the top moves list to get its evaluation
             move_found = False
@@ -693,6 +720,7 @@ class MCPToolRouter:
         try:
             fen = arguments.get("fen")
             depth = arguments.get("depth", 28)
+            time_limit = arguments.get("time_limit")
 
             if not fen:
                 return [
@@ -711,12 +739,20 @@ class MCPToolRouter:
                     )
                 ]
 
-            analysis = self.chess_analyzer.analyze_position(fen, depth)
+            # Use provided time limit or auto-select based on depth
+            if time_limit is None:
+                time_limit = 10.0 if depth >= 25 else 60.0
+            # Apply hard limit of 1 minute
+            time_limit = min(time_limit, 60.0)
+            analysis = self.chess_analyzer.analyze_position(fen, depth, time_limit)
             explanation = self.chess_analyzer.get_position_explanation(fen, analysis)
 
             # Try to get principal variation for endgame planning
             try:
-                pv_result = self.chess_analyzer.get_principal_variation(fen, depth, 8)
+                # Use time limit for endgame PV analysis with 1-minute hard limit
+                pv_result = self.chess_analyzer.get_principal_variation(
+                    fen, depth, 8, time_limit=min(6.0, 60.0)
+                )
                 pv_line = " ".join(pv_result["pv_moves"][:6])  # Show first 6 moves
             except:
                 pv_line = "Unable to calculate"
@@ -795,6 +831,7 @@ class MCPToolRouter:
             move = arguments.get("move")
             top_n = arguments.get("top_n", 3)
             depth = arguments.get("depth", 22)
+            time_limit = arguments.get("time_limit")
 
             if not fen or not move:
                 return [
@@ -804,7 +841,12 @@ class MCPToolRouter:
                 ]
 
             # Analyze the position
-            analysis = self.chess_analyzer.analyze_position(fen, depth)
+            # Use provided time limit or auto-select based on depth
+            if time_limit is None:
+                time_limit = 6.0 if depth >= 20 else 60.0
+            # Apply hard limit of 1 minute
+            time_limit = min(time_limit, 60.0)
+            analysis = self.chess_analyzer.analyze_position(fen, depth, time_limit)
 
             # Check if move is in top N recommendations
             move_found = False
@@ -1030,6 +1072,7 @@ class MCPToolRouter:
             num_lines = arguments.get("num_lines", 3)
             depth = arguments.get("depth", 25)
             moves_per_line = arguments.get("moves_per_line", 6)
+            time_limit = arguments.get("time_limit")
 
             if not fen:
                 return [
@@ -1037,7 +1080,12 @@ class MCPToolRouter:
                 ]
 
             # Get the top moves from analysis
-            analysis = self.chess_analyzer.analyze_position(fen, depth)
+            # Use provided time limit or auto-select based on depth
+            if time_limit is None:
+                time_limit = 10.0 if depth >= 25 else 60.0
+            # Apply hard limit of 1 minute
+            time_limit = min(time_limit, 60.0)
+            analysis = self.chess_analyzer.analyze_position(fen, depth, time_limit)
             top_moves = analysis.get("top_moves", [])
 
             if len(top_moves) < 1:

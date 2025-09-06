@@ -109,12 +109,15 @@ class ChessAnalyzer:
 
         return uci_moves
 
-    def analyze_position(self, fen: str, depth: int = 15) -> Dict:
+    def analyze_position(
+        self, fen: str, depth: int = 15, time_limit: Optional[float] = None
+    ) -> Dict:
         """Analyze a chess position given in FEN notation.
 
         Args:
             fen: The position in FEN notation
             depth: Analysis depth (default 15)
+            time_limit: Maximum time in seconds for analysis (optional)
 
         Returns:
             Dictionary containing position analysis
@@ -123,11 +126,25 @@ class ChessAnalyzer:
             raise ValueError(f"Invalid FEN: {fen}")
 
         self.stockfish.set_fen_position(fen)
-        self.stockfish.set_depth(depth)
 
-        evaluation = self.stockfish.get_evaluation()
-        best_move_uci = self.stockfish.get_best_move()
-        top_moves = self.stockfish.get_top_moves(3)
+        # Use time limit if provided, otherwise use depth
+        if time_limit is not None:
+            # Enforce hard limit of 1 minute for good UX
+            time_limit = min(time_limit, 60.0)
+            # Convert seconds to milliseconds for Stockfish
+            time_ms = int(time_limit * 1000)
+            evaluation = self.stockfish.get_evaluation()
+            best_move_uci = self.stockfish.get_best_move_time(time_ms)
+            # For timed analysis, we need to get top moves differently
+            # Set a reasonable depth limit to prevent infinite analysis
+            self.stockfish.set_depth(min(depth, 20))
+            top_moves = self.stockfish.get_top_moves(3)
+        else:
+            # Standard depth-based analysis
+            self.stockfish.set_depth(depth)
+            evaluation = self.stockfish.get_evaluation()
+            best_move_uci = self.stockfish.get_best_move()
+            top_moves = self.stockfish.get_top_moves(3)
 
         # Convert UCI moves to Standard Algebraic Notation
         best_move = self.uci_to_san(fen, best_move_uci) if best_move_uci else None
@@ -251,7 +268,11 @@ class ChessAnalyzer:
         return " ".join(explanation_parts)
 
     def get_principal_variation(
-        self, fen: str, depth: int = 20, max_moves: int = 20
+        self,
+        fen: str,
+        depth: int = 20,
+        max_moves: int = 20,
+        time_limit: Optional[float] = None,
     ) -> Dict:
         """Get the engine's principal variation (main line) from a position.
 
@@ -276,10 +297,22 @@ class ChessAnalyzer:
             for move_num in range(max_moves):
                 # Analyze current position
                 self.stockfish.set_fen_position(current_fen)
-                self.stockfish.set_depth(depth)
 
-                evaluation = self.stockfish.get_evaluation()
-                best_move_uci = self.stockfish.get_best_move()
+                # Use time limit if provided, otherwise use depth
+                if time_limit is not None:
+                    # Enforce hard limit of 1 minute for good UX
+                    time_limit = min(time_limit, 60.0)
+                    # For PV, use shorter time per move to avoid long delays
+                    time_per_move = min(
+                        time_limit / max(max_moves, 5), 2.0
+                    )  # Max 2 seconds per move
+                    time_ms = int(time_per_move * 1000)
+                    evaluation = self.stockfish.get_evaluation()
+                    best_move_uci = self.stockfish.get_best_move_time(time_ms)
+                else:
+                    self.stockfish.set_depth(depth)
+                    evaluation = self.stockfish.get_evaluation()
+                    best_move_uci = self.stockfish.get_best_move()
 
                 if not best_move_uci:
                     # No more moves (checkmate, stalemate, or error)
