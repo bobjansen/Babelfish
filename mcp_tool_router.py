@@ -506,7 +506,9 @@ class MCPToolRouter:
                         if eval_before["type"] == "cp" and eval_after["type"] == "cp":
                             # Flip eval_after since we moved to opponent's turn
                             eval_change = eval_after["value"] - (-eval_before["value"])
-                            eval_loss = -eval_change / 100  # Loss in pawns for the side that moved
+                            eval_loss = (
+                                -eval_change / 100
+                            )  # Loss in pawns for the side that moved
                         else:
                             eval_loss = None
 
@@ -550,11 +552,17 @@ class MCPToolRouter:
                         elif eval_loss <= 0.3:
                             quality_assessment = f"**Minor Inaccuracy:** Move loses {eval_loss:.2f} pawns"
                         elif eval_loss <= 0.8:
-                            quality_assessment = f"**Inaccuracy:** Move loses {eval_loss:.2f} pawns"
+                            quality_assessment = (
+                                f"**Inaccuracy:** Move loses {eval_loss:.2f} pawns"
+                            )
                         elif eval_loss <= 2.0:
-                            quality_assessment = f"**Mistake:** Move loses {eval_loss:.2f} pawns"
+                            quality_assessment = (
+                                f"**Mistake:** Move loses {eval_loss:.2f} pawns"
+                            )
                         else:
-                            quality_assessment = f"**Blunder:** Move loses {eval_loss:.2f} pawns"
+                            quality_assessment = (
+                                f"**Blunder:** Move loses {eval_loss:.2f} pawns"
+                            )
                     else:
                         quality_assessment = "**Assessment:** Move evaluation complex (involves mate threats)"
 
@@ -573,7 +581,7 @@ class MCPToolRouter:
 
 **Analysis:** The move {move} was not in the engine's top 3 recommendations for this position.{refutation_text}
 
-**Alternative Options:** Consider {best_move} or other engine suggestions for potentially stronger play."""
+**Engine's Preference:** The engine prefers {best_move} in this position{' (saving ' + f'{eval_loss:.2f}' + ' pawns)' if eval_loss and eval_loss > 0.1 else ''}."""
 
                     return [TextContent(type="text", text=formatted_response)]
 
@@ -636,17 +644,13 @@ class MCPToolRouter:
                 if move_quality == "Blunder":
                     formatted_response += f"""
 
-**🚨 BLUNDER ALERT:** This move loses {best_move_loss/100:.1f} pawns compared to the best option!
-**❌ CRITICAL ERROR:** Do NOT play {move} - it's a serious tactical mistake
-**✅ ONLY CORRECT MOVE:** {best_move} (gains {best_move_loss/100:.1f} pawns over the played move)
-**⚡ IMPERATIVE:** The played move must be rejected - only {best_move} maintains the position"""
+**Blunder:** This move loses {best_move_loss/100:.1f} pawns compared to the best option.
+**Engine's top choice:** {best_move} (saves {best_move_loss/100:.1f} pawns over the played move)"""
                 elif move_quality == "Mistake":
                     formatted_response += f"""
 
-**⚠️ MISTAKE:** This move loses {best_move_loss/100:.1f} pawns - significantly inferior to best play
-**❌ INCORRECT CHOICE:** {move} misses better opportunities
-**✅ MUCH BETTER:** {best_move} (improves position by {best_move_loss/100:.1f} pawns)
-**📊 STRONG RECOMMENDATION:** Prefer {best_move} over {move} in this position"""
+**Mistake:** This move loses {best_move_loss/100:.1f} pawns compared to the best option.
+**Engine's top choice:** {best_move} (saves {best_move_loss/100:.1f} pawns over the played move)"""
                 elif move_quality == "Inaccuracy":
                     formatted_response += (
                         f"\n\n**Note:** {best_move} would be slightly better"
@@ -841,20 +845,69 @@ class MCPToolRouter:
 **✅ CONCLUSION:** {move} is a legitimate engine-approved choice (rank #{move_rank}). This move can be confidently recommended."""
 
             else:
-                best_move = analysis.get("best_move", "Unknown")
-                formatted_response = f"""🐟 **Move Validation Result**
+                # Move not in top N, but we need to evaluate its actual quality
+                try:
+                    # Analyze the position after this move
+                    board = chess.Board(fen)
+                    move_obj = board.parse_san(move)
+                    board.push(move_obj)
+                    fen_after = board.fen()
+
+                    analysis_after = self.chess_analyzer.analyze_position(
+                        fen_after, depth
+                    )
+                    eval_after = analysis_after["evaluation"]
+
+                    # Calculate evaluation difference
+                    eval_before = analysis["evaluation"]
+                    if eval_before["type"] == "cp" and eval_after["type"] == "cp":
+                        eval_change = eval_after["value"] - (-eval_before["value"])
+                        eval_loss = -eval_change / 100
+                    else:
+                        eval_loss = None
+
+                    # Determine actual move quality
+                    if eval_loss is not None:
+                        if eval_loss <= 0.1:
+                            status = "Move is practically equal to engine's top choices"
+                        elif eval_loss <= 0.3:
+                            status = f"Minor inaccuracy (loses {eval_loss:.2f} pawns)"
+                        elif eval_loss <= 0.8:
+                            status = f"Inaccuracy (loses {eval_loss:.2f} pawns)"
+                        elif eval_loss <= 2.0:
+                            status = f"Mistake (loses {eval_loss:.2f} pawns)"
+                        else:
+                            status = f"Blunder (loses {eval_loss:.2f} pawns)"
+                    else:
+                        status = "Evaluation complex (involves mate threats)"
+
+                    best_move = analysis.get("best_move", "Unknown")
+                    formatted_response = f"""🐟 **Move Validation Result**
 
 **Position:** {fen}
 **Move Tested:** {move}
 
-**❌ VALIDATION STATUS:** REJECTED - Move is NOT in top {top_n} engine recommendations
+**Analysis:** Move is not in engine's top {top_n} recommendations
+**Quality Assessment:** {status}
 
-**🚨 CRITICAL WARNING:** The move {move} is absent from Stockfish's top {top_n} choices at depth {depth}
-
-**🎯 Engine's Top {top_n} Recommendations:**
+**Engine's Top {top_n} Recommendations:**
 {chr(10).join(top_moves_text)}
 
-**❌ CONCLUSION:** {move} should be considered INCORRECT. Only the moves listed above are engine-approved choices. Use {best_move} or another top recommendation instead."""
+**Note:** The engine prefers {best_move} in this position."""
+
+                except:
+                    # If we can't analyze the move, fall back to simpler message
+                    best_move = analysis.get("best_move", "Unknown")
+                    formatted_response = f"""🐟 **Move Validation Result**
+
+**Position:** {fen}
+**Move Tested:** {move}
+
+**Analysis:** Move is not in engine's top {top_n} recommendations
+**Engine's preference:** {best_move}
+
+**Engine's Top {top_n} Recommendations:**
+{chr(10).join(top_moves_text)}"""
 
             return [TextContent(type="text", text=formatted_response)]
 
@@ -998,9 +1051,7 @@ class MCPToolRouter:
             formatted_response = f"""🐟 **Top {actual_lines} Lines Analysis**
 
 **Starting Position:** {fen}
-**Analysis Depth:** {depth}
-
-"""
+**Analysis Depth:** {depth}\n\n"""
 
             for i, move_info in enumerate(top_moves[:actual_lines], 1):
                 move = move_info.get("Move", "")
@@ -1029,9 +1080,7 @@ class MCPToolRouter:
                 except:
                     full_line = move
 
-                formatted_response += f"""**Line {i}:** {full_line} ({eval_text})
-
-"""
+                formatted_response += f"""**Line {i}:** {full_line} ({eval_text})\n\n"""
 
             formatted_response += f"*Showing up to {moves_per_line} moves per line*"
 

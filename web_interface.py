@@ -31,6 +31,7 @@ class AnalysisResult:
     board_fen: str
     success: bool
     error_message: Optional[str] = None
+    engine_lines: Optional[List[Dict[str, str]]] = None
 
 
 class WebChessAnalyzer:
@@ -60,20 +61,9 @@ class WebChessAnalyzer:
                 }
             )
 
-            # Get basic position analysis with higher depth
-            position_analysis = self.tool_router.call_tool(
-                "analyze_position", {"fen": fen, "depth": 30}
-            )
-            position_data = ""
-            if (
-                isinstance(position_analysis, dict)
-                and position_analysis.get("status") == "success"
-            ):
-                position_data = position_analysis.get("message", "")
-
-            # Get principal variation with higher depth and more moves
+            # Get principal variation with higher depth and more moves (includes position analysis)
             pv_analysis = self.tool_router.call_tool(
-                "get_principal_variation", {"fen": fen, "depth": 30, "max_moves": 12}
+                "get_principal_variation", {"fen": fen, "depth": 30, "max_moves": 24}
             )
             pv_data = ""
             if isinstance(pv_analysis, dict) and pv_analysis.get("status") == "success":
@@ -88,10 +78,23 @@ class WebChessAnalyzer:
             ):
                 visual_data = board_visual.get("message", "")
 
+            # Get top 3 engine lines for sidebar display
+            top_lines_analysis = self.tool_router.call_tool(
+                "get_top_lines",
+                {"fen": fen, "num_lines": 3, "depth": 25, "moves_per_line": 10},
+            )
+            engine_lines = []
+            if (
+                isinstance(top_lines_analysis, dict)
+                and top_lines_analysis.get("status") == "success"
+            ):
+                # Parse the top lines response to extract individual lines
+                lines_text = top_lines_analysis.get("message", "")
+                engine_lines = self._parse_engine_lines(lines_text)
+
             debug_log.append(
                 {
                     "type": "engine_preanalysis_complete",
-                    "position_analysis": position_analysis,
                     "pv_analysis": pv_analysis,
                     "board_visual": board_visual,
                     "timestamp": time.time(),
