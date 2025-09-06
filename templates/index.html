@@ -1940,6 +1940,10 @@
 
         // LLM analysis function (now optional and separate from navigation)
         async function analyzePgnFile() {
+            // Clear conversation history and hide follow-up section for fresh analysis
+            clearConversationHistory();
+            hideFollowUpSection();
+
             console.log('=== Starting LLM Analysis ===');
             const fileInput = document.getElementById('pgnFileInput');
             const question = document.getElementById('pgnQuestionInput').value.trim();
@@ -2067,6 +2071,10 @@
 
         // Analysis function
         async function analyzePosition() {
+            // Clear conversation history and hide follow-up section for fresh analysis
+            clearConversationHistory();
+            hideFollowUpSection();
+
             const fen = document.getElementById('fenInput').value.trim();
             const question = document.getElementById('fenQuestionInput').value.trim();
             const analyzeBtn = document.getElementById('analyzeFenBtn');

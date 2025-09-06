@@ -19,8 +19,7 @@ from mcp_tool_router import MCPToolRouter
 
 app = Flask(__name__)
 
-# Global MCP router instance for follow-up analysis
-mcp_router = MCPToolRouter()
+# Note: MCP router instances are created fresh for each analysis to avoid state persistence
 
 
 @dataclass
@@ -846,6 +845,9 @@ Please provide a focused answer to the user's question about this chess position
         converter = MCPToolConverter()
         openrouter_tools = converter.convert_mcp_tools_to_openai(MCP_TOOLS)
 
+        # Create a fresh MCP router instance to avoid state persistence
+        fresh_mcp_router = MCPToolRouter()
+
         # Use the same analysis flow as the main analysis
         debug_log = []
         messages = [
@@ -948,8 +950,8 @@ Your chess tools can handle move sequences and position analysis accurately - us
                         arguments = {}
 
                     # Execute tool
-                    if hasattr(mcp_router, "call_tool"):
-                        tool_result = mcp_router.call_tool(tool_name, arguments)
+                    if hasattr(fresh_mcp_router, "call_tool"):
+                        tool_result = fresh_mcp_router.call_tool(tool_name, arguments)
                     else:
                         tool_result = {"error": "MCP router not available"}
 
