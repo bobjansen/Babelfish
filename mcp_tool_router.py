@@ -502,6 +502,14 @@ class MCPToolRouter:
                         else:
                             eval_after_text = "Unknown"
 
+                        # Calculate evaluation difference
+                        if eval_before["type"] == "cp" and eval_after["type"] == "cp":
+                            # Flip eval_after since we moved to opponent's turn
+                            eval_change = eval_after["value"] - (-eval_before["value"])
+                            eval_loss = -eval_change / 100  # Loss in pawns for the side that moved
+                        else:
+                            eval_loss = None
+
                         # Get opponent's best response
                         opponent_best = analysis_after.get("best_move", "Unknown")
 
@@ -535,25 +543,37 @@ class MCPToolRouter:
                     except:
                         refutation_text = "\n\n**Note:** Unable to analyze the position after this move."
 
+                    # Determine move quality based on actual evaluation loss
+                    if eval_loss is not None:
+                        if eval_loss <= 0.1:
+                            quality_assessment = "**Assessment:** Move is practically equal to best options"
+                        elif eval_loss <= 0.3:
+                            quality_assessment = f"**Minor Inaccuracy:** Move loses {eval_loss:.2f} pawns"
+                        elif eval_loss <= 0.8:
+                            quality_assessment = f"**Inaccuracy:** Move loses {eval_loss:.2f} pawns"
+                        elif eval_loss <= 2.0:
+                            quality_assessment = f"**Mistake:** Move loses {eval_loss:.2f} pawns"
+                        else:
+                            quality_assessment = f"**Blunder:** Move loses {eval_loss:.2f} pawns"
+                    else:
+                        quality_assessment = "**Assessment:** Move evaluation complex (involves mate threats)"
+
                     formatted_response = f"""🐟 **Move Quality Evaluation**
 
 **Position:** {fen}
 **Move Played:** {move}
 
-**🚨 STRONG WARNING:** This move is NOT in Stockfish's top recommendations - it should be considered INCORRECT or SIGNIFICANTLY INFERIOR to the engine's suggestions.
+{quality_assessment}
 
-**Current Position Evaluation:** {eval_text}
+**Position Before:** {eval_text}
+**Position After:** {eval_after_text}
 
-**🎯 ONLY THESE MOVES ARE RECOMMENDED:**
+**Engine's Top Recommendations:**
 {chr(10).join(best_moves_text)}
 
-**❌ CRITICAL:** The played move {move} is absent from the engine's analysis, indicating it's likely:
-- A tactical error that loses material/position
-- Missing a much stronger continuation
-- Allowing opponent counterplay that could have been avoided
-- Not considering the engine's preferred plans{refutation_text}
+**Analysis:** The move {move} was not in the engine's top 3 recommendations for this position.{refutation_text}
 
-**⚡ IMPERATIVE:** Use {best_move} or one of the other engine recommendations. The played move {move} should be rejected unless there are exceptional circumstances not visible to the engine."""
+**Alternative Options:** Consider {best_move} or other engine suggestions for potentially stronger play."""
 
                     return [TextContent(type="text", text=formatted_response)]
 
