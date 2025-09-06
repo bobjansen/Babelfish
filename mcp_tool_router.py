@@ -30,7 +30,6 @@ class MCPToolRouter:
 
     def __init__(self, chess_analyzer: ChessAnalyzer = None):
         if chess_analyzer is None:
-            # Import here to avoid circular imports and initialize if not provided
             chess_analyzer = ChessAnalyzer(
                 verbose=True
             )  # Show configuration in verbose mode
@@ -43,16 +42,16 @@ class MCPToolRouter:
         """Register all available chess analysis MCP tools."""
         self.tools = {
             "analyze_position": self._analyze_position,
+            "analyze_endgame": self._analyze_endgame,
             "analyze_game": self._analyze_game,
+            "apply_moves": self._apply_moves,
+            "find_tactical_motifs": self._find_tactical_motifs,
             "explain_position": self._explain_position,
+            "evaluate_move_quality": self._evaluate_move_quality,
             "get_principal_variation": self._get_principal_variation,
             "suggest_move": self._suggest_move,
-            "find_tactical_motifs": self._find_tactical_motifs,
-            "evaluate_move_quality": self._evaluate_move_quality,
-            "analyze_endgame": self._analyze_endgame,
-            "visualize_board": self._visualize_board,
             "validate_move_choice": self._validate_move_choice,
-            "apply_moves": self._apply_moves,
+            "visualize_board": self._visualize_board,
         }
 
     def call_tool(self, tool_name: str, arguments: Dict[str, Any]):
@@ -183,9 +182,12 @@ class MCPToolRouter:
 
             analyses = self.chess_analyzer.analyze_game(moves)
 
-            formatted_response = f"🐟 **Chess Game Analysis**\n\n**Total Moves:** {len(moves)}\n**Analysis Depth:** {depth}\n\n"
+            formatted_response = f"""🐟 **Chess Game Analysis**
 
-            for analysis in analyses[-5:]:  # Show last 5 moves
+**Total Moves:** {len(moves)}
+**Analysis Depth:** {depth}\n\n"""
+
+            for analysis in analyses[-10:]:  # Show last 5 full moves
                 move_num = analysis["move_number"]
                 move = analysis["move"]
                 eval_info = analysis["evaluation"]
@@ -200,9 +202,9 @@ class MCPToolRouter:
 
                 formatted_response += f"**{move_num}.** {move} → {eval_text}\n"
 
-            if len(analyses) > 5:
+            if len(analyses) > 10:
                 formatted_response += (
-                    f"\n*Showing last 5 moves of {len(analyses)} total*"
+                    f"\n*Showing last 10 moves of {len(analyses)} total*"
                 )
 
             return [TextContent(type="text", text=formatted_response)]
@@ -221,7 +223,9 @@ class MCPToolRouter:
                 ]
 
             explanation = self.chess_analyzer.get_position_explanation(fen, depth=15)
-            formatted_response = f"🐟 **Position Explanation**\n\n**FEN:** {fen}\n\n**Analysis:** {explanation}"
+            formatted_response = f"""🐟 **Position Explanation**
+
+**FEN:** {fen}\n\n**Analysis:** {explanation}"""
 
             return [TextContent(type="text", text=formatted_response)]
 
@@ -255,8 +259,8 @@ class MCPToolRouter:
 **Move-by-Move Analysis:**"""
 
             for i, move_analysis in enumerate(
-                pv_result["pv_analysis"][:5], 1
-            ):  # Show first 5 moves
+                pv_result["pv_analysis"][:10], 1
+            ):  # Show first 10 moves
                 move = move_analysis["move_san"]
                 eval_info = move_analysis["evaluation"]
 
@@ -269,8 +273,8 @@ class MCPToolRouter:
 
                 formatted_response += f"\n{i}. {move} → {eval_text}"
 
-            if len(pv_result["pv_analysis"]) > 5:
-                formatted_response += f"\n\n*Showing first 5 moves of {len(pv_result['pv_analysis'])} analyzed*"
+            if len(pv_result["pv_analysis"]) > 10:
+                formatted_response += f"\n\n*Showing first 10 moves of {len(pv_result['pv_analysis'])} analyzed*"
 
             formatted_response += (
                 f"\n\n*Analysis depth: {depth}, Max moves: {max_moves}*"
