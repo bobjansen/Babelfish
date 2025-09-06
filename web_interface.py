@@ -60,9 +60,9 @@ class WebChessAnalyzer:
                 }
             )
 
-            # Get basic position analysis
+            # Get basic position analysis with higher depth
             position_analysis = self.tool_router.call_tool(
-                "analyze_position", {"fen": fen, "depth": 20}
+                "analyze_position", {"fen": fen, "depth": 30}
             )
             position_data = ""
             if (
@@ -71,9 +71,9 @@ class WebChessAnalyzer:
             ):
                 position_data = position_analysis.get("message", "")
 
-            # Get principal variation
+            # Get principal variation with higher depth and more moves
             pv_analysis = self.tool_router.call_tool(
-                "get_principal_variation", {"fen": fen, "depth": 20, "max_moves": 8}
+                "get_principal_variation", {"fen": fen, "depth": 30, "max_moves": 12}
             )
             pv_data = ""
             if isinstance(pv_analysis, dict) and pv_analysis.get("status") == "success":
@@ -653,32 +653,50 @@ CRITICAL INSTRUCTIONS FOR WEB INTERFACE:
 5. Provide analysis in clear, well-structured markdown format
 6. Clearly separate your final analysis with a markdown header
 
+CHESS ANALYSIS STYLE - MANDATORY:
+Write in a concise, chess book style:
+- **Terse and professional**: Avoid exclamation marks, emojis, and emotional language
+- **Direct evaluation**: State facts plainly (e.g., "Black loses material" not "devastating blunder!")
+- **Clear structure**: Use short paragraphs with specific points
+- **Chess terminology**: Use standard chess vocabulary without excessive explanation
+- **No marketing language**: Avoid words like "crushing", "devastating", "fatal", "brilliant"
+
+EVALUATION INTERPRETATION:
+Always interpret engine evaluations to provide likely outcomes:
+- **+0.0 to +0.5**: Roughly equal, either side can hold
+- **+0.5 to +1.5**: Clear advantage, winning chances with precise play
+- **+1.5 to +3.0**: Significant advantage, should win with correct technique
+- **+3.0+**: Decisive advantage, position likely wins itself
+- **Mate values**: State the forced outcome clearly
+
+ANALYSIS STRUCTURE:
+1. **Move assessment** (1-2 sentences max)
+2. **Likely outcome** (based on evaluation, 1 sentence)
+3. **Key variation** (main line only, 3-5 moves)
+4. **Strategic point** (1 sentence)
+5. **Alternative** (if relevant, 1 sentence)
+
 WEB OUTPUT FORMAT:
-Structure your response exactly like this:
+Structure your response like this:
 
-## 🔍 Analysis Results
+## Analysis
 
-[Your comprehensive analysis here in markdown format]
+[Concise analysis in chess book style]
 
-### Key Findings
-- Key tactical motifs discovered
-- Strategic plans for both sides
-- Critical weaknesses or strengths
+**Outlook:** White should win with correct technique (based on +2.1 evaluation).
 
-### Recommended Moves
-- Best moves with explanations
-- Alternative options to consider
+**Main Line:** 1.e4 e5 2.Nf3 Nc6 3.Bb5 (brief explanation)
 
-### Learning Points
-- Important chess principles illustrated
-- Patterns to remember
+**Assessment:** White maintains pressure on the queenside. Black's pieces lack coordination.
 
-MARKDOWN REQUIREMENTS:
-- Use ## for main headers, ### for subheaders
-- Use **bold** for emphasis
-- Use bullet points for lists
-- Use > for important quotes or principles
-- Keep it readable and well-organized
+**Alternative:** 3...f5 deserves attention, though it weakens the kingside.
+
+AVOID:
+- Excessive formatting (emojis, bullet points, headers)
+- Emotional language ("devastating", "crushing", "brilliant")
+- Redundant explanations
+- Marketing-style enthusiasm
+- Long bullet point lists
 
 TOOL USAGE:
 - ALWAYS use visualize_board before discussing piece positions
@@ -686,7 +704,7 @@ TOOL USAGE:
 - Use find_tactical_motifs for tactical analysis
 - Never make geometric claims without visual verification
 
-Your goal: Provide expert analysis that combines precise engine evaluation with educational chess coaching, formatted beautifully in markdown."""
+Your goal: Provide expert analysis in the style of classic chess literature - precise, educational, and professional."""
 
 
 # Flask routes
@@ -854,6 +872,13 @@ Please provide a focused answer to the user's question about this chess position
             {
                 "role": "system",
                 "content": """You are a chess coach providing follow-up analysis. Use the available chess tools to answer questions accurately.
+
+CHESS ANALYSIS STYLE - MANDATORY:
+Write in a concise, chess book style:
+- **Terse and professional**: Avoid exclamation marks, emojis, and emotional language
+- **Direct evaluation**: State facts plainly (e.g., "Black loses material" not "devastating blunder!")
+- **Clear structure**: Use short paragraphs with specific points
+- **No marketing language**: Avoid words like "crushing", "devastating", "fatal", "brilliant"
 
 CRITICAL: When analyzing specific moves or variations:
 1. NEVER manually calculate new FEN positions - this leads to errors

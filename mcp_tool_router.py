@@ -122,7 +122,7 @@ class MCPToolRouter:
 
             # Validate FEN
             analysis = self.chess_analyzer.analyze_position(fen, depth)
-            explanation = self.chess_analyzer.get_position_explanation(fen)
+            explanation = self.chess_analyzer.get_position_explanation(fen, analysis)
 
             # Create a formatted text response
             eval_info = analysis["evaluation"]
@@ -220,7 +220,7 @@ class MCPToolRouter:
                     TextContent(type="text", text="❌ Error: FEN position is required")
                 ]
 
-            explanation = self.chess_analyzer.get_position_explanation(fen)
+            explanation = self.chess_analyzer.get_position_explanation(fen, depth=15)
             formatted_response = f"🐟 **Position Explanation**\n\n**FEN:** {fen}\n\n**Analysis:** {explanation}"
 
             return [TextContent(type="text", text=formatted_response)]
@@ -297,7 +297,7 @@ class MCPToolRouter:
                 ]
 
             analysis = self.chess_analyzer.analyze_position(fen, depth)
-            explanation = self.chess_analyzer.get_position_explanation(fen)
+            explanation = self.chess_analyzer.get_position_explanation(fen, analysis)
 
             eval_info = analysis["evaluation"]
             if eval_info["type"] == "cp":
@@ -686,7 +686,7 @@ class MCPToolRouter:
                 ]
 
             analysis = self.chess_analyzer.analyze_position(fen, depth)
-            explanation = self.chess_analyzer.get_position_explanation(fen)
+            explanation = self.chess_analyzer.get_position_explanation(fen, analysis)
 
             # Try to get principal variation for endgame planning
             try:

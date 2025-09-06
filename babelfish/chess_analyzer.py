@@ -197,16 +197,19 @@ class ChessAnalyzer:
 
         return analyses
 
-    def get_position_explanation(self, fen: str) -> str:
+    def get_position_explanation(self, fen: str, analysis: Dict = None, depth: int = 15) -> str:
         """Get a human-readable explanation of the position.
 
         Args:
             fen: The position in FEN notation
+            analysis: Pre-computed analysis to use (optional)
+            depth: Analysis depth if analysis is not provided
 
         Returns:
             Human-readable position description
         """
-        analysis = self.analyze_position(fen)
+        if analysis is None:
+            analysis = self.analyze_position(fen, depth)
 
         explanation_parts = []
 
