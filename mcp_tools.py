@@ -175,6 +175,41 @@ MCP_TOOLS = [
         },
     ),
     Tool(
+        name="get_top_lines",
+        description="Get the top principal variations (best lines of play) from a position. Shows alternative continuations and their evaluations. Use this to compare different strategic approaches.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "fen": {
+                    "type": "string",
+                    "description": "The chess position in FEN notation",
+                },
+                "num_lines": {
+                    "type": "integer",
+                    "description": "Number of top lines to show (2-5, default: 3). Use fewer lines for simple positions, more for complex tactical positions.",
+                    "default": 3,
+                    "minimum": 2,
+                    "maximum": 5,
+                },
+                "depth": {
+                    "type": "integer",
+                    "description": "Analysis depth for each line (default: 25)",
+                    "default": 25,
+                    "minimum": 15,
+                    "maximum": 30,
+                },
+                "moves_per_line": {
+                    "type": "integer",
+                    "description": "Number of moves to show per line (default: 6)",
+                    "default": 6,
+                    "minimum": 3,
+                    "maximum": 10,
+                },
+            },
+            "required": ["fen"],
+        },
+    ),
+    Tool(
         name="visualize_board",
         description="Generate ASCII visualization of a chess board position from FEN notation. ESSENTIAL for verifying tactical claims - use this before making any statements about piece attacks, defenses, or interactions.",
         inputSchema={

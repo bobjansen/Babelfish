@@ -49,6 +49,7 @@ class MCPToolRouter:
             "explain_position": self._explain_position,
             "evaluate_move_quality": self._evaluate_move_quality,
             "get_principal_variation": self._get_principal_variation,
+            "get_top_lines": self._get_top_lines,
             "suggest_move": self._suggest_move,
             "validate_move_choice": self._validate_move_choice,
             "visualize_board": self._visualize_board,
@@ -951,5 +952,82 @@ class MCPToolRouter:
                 TextContent(
                     type="text",
                     text=f"❌ Error applying moves: {str(e)}",
+                )
+            ]
+
+    def _get_top_lines(self, arguments: Dict[str, Any]) -> List[TextContent]:
+        """Get the top principal variations (best lines) from a position."""
+        try:
+            fen = arguments.get("fen")
+            num_lines = arguments.get("num_lines", 3)
+            depth = arguments.get("depth", 25)
+            moves_per_line = arguments.get("moves_per_line", 6)
+
+            if not fen:
+                return [
+                    TextContent(type="text", text="❌ Error: FEN position is required")
+                ]
+
+            # Get the top moves from analysis
+            analysis = self.chess_analyzer.analyze_position(fen, depth)
+            top_moves = analysis.get("top_moves", [])
+
+            if len(top_moves) < 1:
+                return [
+                    TextContent(type="text", text="❌ No legal moves found in position")
+                ]
+
+            # Limit to available moves and requested lines
+            actual_lines = min(num_lines, len(top_moves))
+
+            formatted_response = f"""🐟 **Top {actual_lines} Lines Analysis**
+
+**Starting Position:** {fen}
+**Analysis Depth:** {depth}
+
+"""
+
+            for i, move_info in enumerate(top_moves[:actual_lines], 1):
+                move = move_info.get("Move", "")
+                centipawn = move_info.get("Centipawn", 0)
+
+                if centipawn is not None:
+                    eval_text = f"{centipawn/100:+.2f}"
+                else:
+                    eval_text = "N/A"
+
+                # Get the principal variation for this move
+                try:
+                    # Apply the move to get the new position
+                    import chess
+
+                    board = chess.Board(fen)
+                    move_obj = board.parse_san(move)
+                    board.push(move_obj)
+                    new_fen = board.fen()
+
+                    # Get PV from the resulting position
+                    pv_result = self.chess_analyzer.get_principal_variation(
+                        new_fen, depth, moves_per_line - 1
+                    )
+                    continuation = " ".join(pv_result["pv_moves"][: moves_per_line - 1])
+                    full_line = f"{move} {continuation}".strip()
+
+                except:
+                    full_line = move
+
+                formatted_response += f"""**Line {i}:** {full_line} ({eval_text})
+
+"""
+
+            formatted_response += f"*Showing up to {moves_per_line} moves per line*"
+
+            return [TextContent(type="text", text=formatted_response)]
+
+        except Exception as e:
+            return [
+                TextContent(
+                    type="text",
+                    text=f"❌ Error getting top lines: {str(e)}",
                 )
             ]
