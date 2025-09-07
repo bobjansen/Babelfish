@@ -1428,6 +1428,9 @@
         // Chess game state for FEN tab
         let fenChessGame = null;
 
+        // Analysis state - prevent navigation during analysis
+        let isAnalyzing = false;
+
         // Game navigation state
         let gameData = {
             moves: [],
@@ -2070,11 +2073,11 @@
 
             positionInfo.textContent = `Move ${gameData.currentMoveIndex} of ${gameData.moves.length}`;
 
-            // Update button states
-            document.getElementById('firstMoveBtn').disabled = gameData.currentMoveIndex === 0;
-            document.getElementById('prevMoveBtn').disabled = gameData.currentMoveIndex === 0;
-            document.getElementById('nextMoveBtn').disabled = gameData.currentMoveIndex >= gameData.moves.length;
-            document.getElementById('lastMoveBtn').disabled = gameData.currentMoveIndex >= gameData.moves.length;
+            // Update button states - disable during analysis or based on position
+            document.getElementById('firstMoveBtn').disabled = isAnalyzing || gameData.currentMoveIndex === 0;
+            document.getElementById('prevMoveBtn').disabled = isAnalyzing || gameData.currentMoveIndex === 0;
+            document.getElementById('nextMoveBtn').disabled = isAnalyzing || gameData.currentMoveIndex >= gameData.moves.length;
+            document.getElementById('lastMoveBtn').disabled = isAnalyzing || gameData.currentMoveIndex >= gameData.moves.length;
 
             // Highlight current move in move list
             document.querySelectorAll('.move-cell').forEach(cell => {
@@ -2105,6 +2108,10 @@
 
         function goToMove(moveIndex) {
             if (!gameData.isGameLoaded) return;
+            if (isAnalyzing) {
+                console.log('Navigation blocked: Analysis in progress');
+                return;
+            }
 
             if (moveIndex === -1) {
                 moveIndex = gameData.moves.length; // Go to last move
@@ -2116,12 +2123,20 @@
         }
 
         function nextMove() {
+            if (isAnalyzing) {
+                console.log('Navigation blocked: Analysis in progress');
+                return;
+            }
             if (gameData.currentMoveIndex < gameData.moves.length) {
                 goToMove(gameData.currentMoveIndex + 1);
             }
         }
 
         function previousMove() {
+            if (isAnalyzing) {
+                console.log('Navigation blocked: Analysis in progress');
+                return;
+            }
             if (gameData.currentMoveIndex > 0) {
                 goToMove(gameData.currentMoveIndex - 1);
             }
@@ -2149,14 +2164,17 @@
             const file = fileInput.files[0];
             console.log('Running AI analysis on:', file.name);
 
-            // Update UI for loading state
+            // Set analysis state and update UI
+            isAnalyzing = true;
+            updateNavigationDisplay(); // Disable navigation buttons
+
             if (analyzeBtn) {
                 analyzeBtn.disabled = true;
                 analyzeBtn.innerHTML = '<div class="spinner"></div>AI Analyzing...';
             }
 
             if (analysisContent) {
-                analysisContent.innerHTML = '<div class="loading"><div class="spinner"></div>🤖 AI is analyzing the chess game... (Navigation still works!)</div>';
+                analysisContent.innerHTML = '<div class="loading"><div class="spinner"></div>🤖 AI is analyzing the chess game...</div>';
             }
             if (debugContent) {
                 debugContent.innerHTML = '<div class="loading"><div class="spinner"></div>Loading AI analysis debug information...</div>';
@@ -2220,6 +2238,10 @@
                     debugContent.innerHTML = `<div class="error">❌ Network error: ${error.message}</div>`;
                 }
             } finally {
+                // Clear analysis state and reset UI
+                isAnalyzing = false;
+                updateNavigationDisplay(); // Re-enable navigation buttons
+
                 // Reset button
                 if (analyzeBtn) {
                     analyzeBtn.disabled = false;
@@ -2275,7 +2297,10 @@
                 return;
             }
 
-            // Update UI for loading state
+            // Set analysis state and update UI
+            isAnalyzing = true;
+            updateNavigationDisplay(); // Disable navigation buttons
+
             analyzeBtn.disabled = true;
             analyzeBtn.innerHTML = '<div class="spinner"></div>Analyzing...';
 
@@ -2325,6 +2350,10 @@
                 analysisContent.innerHTML = `<div class="error">❌ Network error: ${error.message}</div>`;
                 debugContent.innerHTML = `<div class="error">❌ Network error: ${error.message}</div>`;
             } finally {
+                // Clear analysis state and reset UI
+                isAnalyzing = false;
+                updateNavigationDisplay(); // Re-enable navigation buttons
+
                 // Reset button
                 analyzeBtn.disabled = false;
                 analyzeBtn.innerHTML = '🔍 Analyze Position';
@@ -2526,6 +2555,12 @@
         // Global keyboard shortcuts for game navigation
         document.addEventListener('keydown', function(e) {
             if (!gameData.isGameLoaded) return;
+
+            // Block keyboard navigation during analysis
+            if (isAnalyzing) {
+                console.log('Keyboard navigation blocked: Analysis in progress');
+                return;
+            }
 
             // Don't interfere with input fields
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
