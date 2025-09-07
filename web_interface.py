@@ -79,19 +79,13 @@ class WebChessAnalyzer:
             ):
                 visual_data = board_visual.get("message", "")
 
-            # Get top 3 engine lines for sidebar display
-            top_lines_analysis = self.tool_router.call_tool(
-                "get_top_lines",
-                {"fen": fen, "num_lines": 3, "depth": 25, "moves_per_line": 10},
+            # Get top 3 engine lines for sidebar display (structured data)
+            engine_lines_result = self.tool_router.get_top_lines_structured(
+                fen=fen, num_lines=3, depth=25, moves_per_line=10
             )
             engine_lines = []
-            if (
-                isinstance(top_lines_analysis, dict)
-                and top_lines_analysis.get("status") == "success"
-            ):
-                # Parse the top lines response to extract individual lines
-                lines_text = top_lines_analysis.get("message", "")
-                engine_lines = self._parse_engine_lines(lines_text)
+            if "lines" in engine_lines_result:
+                engine_lines = engine_lines_result["lines"]
 
             debug_log.append(
                 {
@@ -276,6 +270,7 @@ Specific question: {user_question}\n\n{engine_context}"""
                 board_fen=fen,
                 success=False,
                 error_message=str(e),
+                engine_lines=engine_lines if "engine_lines" in locals() else [],
             )
 
     def _extract_evaluations_from_pgn(
@@ -644,27 +639,6 @@ Please analyze:
                 success=False,
                 error_message=str(e),
             )
-
-    def _parse_engine_lines(self, lines_text: str) -> List[Dict[str, str]]:
-        """Parse engine lines from the tool response."""
-        lines = []
-        try:
-            # Look for lines that match the pattern: "**Line X:** moves (eval)"
-            import re
-
-            line_pattern = r"\*\*Line (\d+):\*\* (.+?) \(([+-]?\d*\.?\d+)\)"
-            matches = re.findall(line_pattern, lines_text)
-
-            for match in matches:
-                line_num, moves, eval_str = match
-                lines.append(
-                    {"number": line_num, "moves": moves.strip(), "eval": eval_str}
-                )
-        except Exception:
-            # If parsing fails, return empty list
-            pass
-
-        return lines
 
     def _get_web_system_prompt(self) -> str:
         """Get enhanced system prompt for web interface."""

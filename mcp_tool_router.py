@@ -741,7 +741,7 @@ class MCPToolRouter:
 
             # Use provided time limit or auto-select based on depth
             if time_limit is None:
-                time_limit = 10.0 if depth >= 25 else 60.0
+                time_limit = 30.0 if depth >= 25 else 60.0
             # Apply hard limit of 1 minute
             time_limit = min(time_limit, 60.0)
             analysis = self.chess_analyzer.analyze_position(fen, depth, time_limit)
@@ -1082,7 +1082,7 @@ class MCPToolRouter:
             # Get the top moves from analysis
             # Use provided time limit or auto-select based on depth
             if time_limit is None:
-                time_limit = 10.0 if depth >= 25 else 60.0
+                time_limit = 30.0 if depth >= 25 else 60.0
             # Apply hard limit of 1 minute
             time_limit = min(time_limit, 60.0)
             analysis = self.chess_analyzer.analyze_position(fen, depth, time_limit)
@@ -1141,3 +1141,75 @@ class MCPToolRouter:
                     text=f"❌ Error getting top lines: {str(e)}",
                 )
             ]
+
+    def get_top_lines_structured(
+        self,
+        fen: str,
+        num_lines: int = 3,
+        depth: int = 25,
+        moves_per_line: int = 6,
+        time_limit: float = None,
+    ) -> Dict[str, Any]:
+        """Get the top principal variations as structured data."""
+        try:
+            if not fen:
+                return {"error": "FEN position is required"}
+
+            # Use provided time limit or depth-based analysis
+            if time_limit is None:
+                # For deep analysis, use depth-based instead of time-based
+                analysis = self.chess_analyzer.analyze_position(fen, depth)
+            else:
+                # Apply hard limit of 1 minute for timed analysis
+                time_limit = min(time_limit, 60.0)
+                analysis = self.chess_analyzer.analyze_position(fen, depth, time_limit)
+            top_moves = analysis.get("top_moves", [])
+
+            if len(top_moves) < 1:
+                return {"error": "No legal moves found in position"}
+
+            # Limit to available moves and requested lines
+            actual_lines = min(num_lines, len(top_moves))
+            lines = []
+
+            for i, move_info in enumerate(top_moves[:actual_lines], 1):
+                move = move_info.get("Move", "")
+                centipawn = move_info.get("Centipawn")
+
+                # Format evaluation
+                if centipawn is not None:
+                    eval_text = f"{centipawn/100:+.2f}"
+                else:
+                    eval_text = "0.00"  # Default to 0.00 instead of N/A
+
+                # Get the principal variation for this move
+                try:
+                    import chess
+
+                    # Apply the move to get the new position
+                    board = chess.Board(fen)
+                    move_obj = board.parse_san(move)
+                    board.push(move_obj)
+                    new_fen = board.fen()
+
+                    # Get PV from the resulting position
+                    pv_result = self.chess_analyzer.get_principal_variation(
+                        new_fen, depth, moves_per_line - 1
+                    )
+                    continuation = " ".join(pv_result["pv_moves"][: moves_per_line - 1])
+                    full_line = f"{move} {continuation}".strip()
+
+                except:
+                    full_line = move
+
+                lines.append({"number": i, "moves": full_line, "eval": eval_text})
+
+            return {
+                "lines": lines,
+                "fen": fen,
+                "depth": depth,
+                "time_limit": time_limit if time_limit is not None else "depth-based",
+            }
+
+        except Exception as e:
+            return {"error": f"Error getting top lines: {str(e)}"}
