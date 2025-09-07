@@ -48,6 +48,10 @@ class ChessAnalyzer:
             "total_cores": num_cores,
         }
 
+        # Cache for position analysis to avoid redundant calculations
+        self._current_fen = None
+        self._current_analysis = None
+
     def uci_to_san(self, fen: str, uci_move: str) -> str:
         """Convert UCI move to Standard Algebraic Notation.
 
@@ -114,6 +118,8 @@ class ChessAnalyzer:
     ) -> Dict:
         """Analyze a chess position given in FEN notation.
 
+        Uses caching to avoid redundant analysis of the same position.
+
         Args:
             fen: The position in FEN notation
             depth: Analysis depth (default 15)
@@ -124,6 +130,15 @@ class ChessAnalyzer:
         """
         if not self.stockfish.is_fen_valid(fen):
             raise ValueError(f"Invalid FEN: {fen}")
+
+        # Check if we've already analyzed this position with same parameters
+        cache_key = f"{fen}_{depth}_{time_limit}"
+        if (
+            self._current_fen == fen
+            and self._current_analysis is not None
+            and self._current_analysis.get("cache_key") == cache_key
+        ):
+            return self._current_analysis
 
         self.stockfish.set_fen_position(fen)
 
@@ -162,7 +177,7 @@ class ChessAnalyzer:
             else:
                 top_moves_san.append(move_info)
 
-        return {
+        analysis_result = {
             "fen": fen,
             "evaluation": evaluation,
             "best_move": best_move,
@@ -173,7 +188,14 @@ class ChessAnalyzer:
                 if best_move_uci
                 else False
             ),
+            "cache_key": cache_key,
         }
+
+        # Cache the analysis result
+        self._current_fen = fen
+        self._current_analysis = analysis_result
+
+        return analysis_result
 
     def analyze_game(self, moves: List[str]) -> List[Dict]:
         """Analyze a complete game given as a list of moves.
@@ -192,9 +214,12 @@ class ChessAnalyzer:
         # Analyze each position in the game
         for i in range(len(moves)):
             try:
-                # Set position up to move i
-                self.stockfish = Stockfish()  # Reset to starting position
-                if i > 0:
+                # Set position up to move i - reuse existing instance
+                if i == 0:
+                    # Reset to starting position for first move
+                    self.stockfish.set_position([])
+                else:
+                    # Set position with all previous moves
                     self.stockfish.set_position(uci_moves[:i])
 
                 # Make the current move
@@ -296,8 +321,9 @@ class ChessAnalyzer:
             board = chess.Board(fen)
 
             for move_num in range(max_moves):
-                # Analyze current position
-                self.stockfish.set_fen_position(current_fen)
+                # Analyze current position (reuse cached analysis if available)
+                if current_fen != self._current_fen:
+                    self.stockfish.set_fen_position(current_fen)
 
                 # Use time limit if provided, otherwise use depth
                 if time_limit is not None:
@@ -380,3 +406,104 @@ class ChessAnalyzer:
             "total_moves": len(pv_moves),
             "analysis_depth": depth,
         }
+
+    def evaluate_candidate_moves(
+        self, fen: str, candidate_moves: List[str], depth: int = 15
+    ) -> Dict:
+        """Quickly evaluate multiple candidate moves from a position.
+
+        This method leverages the persistent Stockfish instance and caching
+        to rapidly compare multiple move options without hesitation.
+
+        Args:
+            fen: The position in FEN notation
+            candidate_moves: List of moves in SAN format to evaluate
+            depth: Analysis depth for evaluation
+
+        Returns:
+            Dictionary with evaluations for each candidate move
+        """
+        if not self.stockfish.is_fen_valid(fen):
+            raise ValueError(f"Invalid FEN: {fen}")
+
+        results = {
+            "position_fen": fen,
+            "candidate_evaluations": [],
+            "best_candidate": None,
+            "analysis_depth": depth,
+        }
+
+        try:
+            board = chess.Board(fen)
+            self.stockfish.set_fen_position(fen)
+            self.stockfish.set_depth(depth)
+
+            best_eval = None
+            best_move = None
+
+            for move_san in candidate_moves:
+                try:
+                    # Convert SAN to UCI
+                    move_uci = self.san_to_uci(fen, move_san)
+
+                    # Validate move is legal
+                    chess_move = board.parse_san(move_san)
+                    if chess_move not in board.legal_moves:
+                        results["candidate_evaluations"].append(
+                            {"move": move_san, "error": "Illegal move"}
+                        )
+                        continue
+
+                    # Make the move temporarily
+                    temp_board = board.copy()
+                    temp_board.push(chess_move)
+                    new_fen = temp_board.fen()
+
+                    # Get evaluation after this move (from opponent's perspective)
+                    self.stockfish.set_fen_position(new_fen)
+                    evaluation = self.stockfish.get_evaluation()
+
+                    # Flip evaluation for current player's perspective
+                    if evaluation["type"] == "cp":
+                        # Flip centipawn evaluation (opponent's advantage becomes our disadvantage)
+                        eval_score = -evaluation["value"]
+                    elif evaluation["type"] == "mate":
+                        # Flip mate score
+                        eval_score = (
+                            -evaluation["value"] if evaluation["value"] != 0 else 0
+                        )
+                    else:
+                        eval_score = 0
+
+                    move_result = {
+                        "move": move_san,
+                        "move_uci": move_uci,
+                        "evaluation": evaluation,
+                        "eval_score": eval_score,  # From current player's perspective
+                        "resulting_fen": new_fen,
+                    }
+
+                    results["candidate_evaluations"].append(move_result)
+
+                    # Track best move (highest eval_score is best for current player)
+                    if best_eval is None or eval_score > best_eval:
+                        best_eval = eval_score
+                        best_move = move_result
+
+                except Exception as e:
+                    results["candidate_evaluations"].append(
+                        {"move": move_san, "error": str(e)}
+                    )
+
+            # Set best candidate
+            results["best_candidate"] = best_move
+
+            # Sort candidates by evaluation (best first)
+            results["candidate_evaluations"].sort(
+                key=lambda x: x.get("eval_score", float("-inf")), reverse=True
+            )
+
+        except Exception as e:
+            results["error"] = str(e)
+
+        return results

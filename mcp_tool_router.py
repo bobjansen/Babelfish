@@ -46,6 +46,7 @@ class MCPToolRouter:
             "analyze_endgame": self._analyze_endgame,
             "analyze_game": self._analyze_game,
             "apply_moves": self._apply_moves,
+            "evaluate_candidate_moves": self._evaluate_candidate_moves,
             "find_tactical_motifs": self._find_tactical_motifs,
             "explain_position": self._explain_position,
             "evaluate_move_quality": self._evaluate_move_quality,
@@ -1213,3 +1214,106 @@ class MCPToolRouter:
 
         except Exception as e:
             return {"error": f"Error getting top lines: {str(e)}"}
+
+    def _evaluate_candidate_moves(self, arguments: Dict[str, Any]) -> List[TextContent]:
+        """Rapidly evaluate multiple candidate moves from a position."""
+        try:
+            fen = arguments.get("fen")
+            candidate_moves = arguments.get("candidate_moves", [])
+            depth = arguments.get("depth", 15)
+
+            if not fen:
+                return [
+                    TextContent(type="text", text="❌ Error: FEN position is required")
+                ]
+
+            if not candidate_moves or len(candidate_moves) < 2:
+                return [
+                    TextContent(
+                        type="text",
+                        text="❌ Error: At least 2 candidate moves are required",
+                    )
+                ]
+
+            # Use the new rapid evaluation method
+            results = self.chess_analyzer.evaluate_candidate_moves(
+                fen, candidate_moves, depth
+            )
+
+            if "error" in results:
+                return [TextContent(type="text", text=f"❌ Error: {results['error']}")]
+
+            # Format the results
+            response_lines = []
+            response_lines.append("🔍 **Candidate Move Evaluation**")
+            response_lines.append(f"📍 **Position**: {fen}")
+            response_lines.append(f"🎯 **Analysis Depth**: {depth}")
+            response_lines.append("")
+
+            # Show best candidate first
+            if results.get("best_candidate"):
+                best = results["best_candidate"]
+                eval_text = ""
+                if best["evaluation"]["type"] == "cp":
+                    cp_val = best[
+                        "eval_score"
+                    ]  # Already flipped to current player's perspective
+                    if cp_val > 0:
+                        eval_text = f"+{cp_val/100:.2f}"
+                    else:
+                        eval_text = f"{cp_val/100:.2f}"
+                elif best["evaluation"]["type"] == "mate":
+                    mate_val = best["eval_score"]
+                    eval_text = f"#{mate_val}" if mate_val != 0 else "0.00"
+                else:
+                    eval_text = "0.00"
+
+                response_lines.append(
+                    f"⭐ **BEST CANDIDATE**: {best['move']} ({eval_text})"
+                )
+                response_lines.append("")
+
+            # Show all candidates in order (best first)
+            response_lines.append("📊 **All Candidates (best to worst)**:")
+            for i, candidate in enumerate(results["candidate_evaluations"], 1):
+                if "error" in candidate:
+                    response_lines.append(
+                        f"{i}. {candidate['move']} - ❌ {candidate['error']}"
+                    )
+                    continue
+
+                eval_text = ""
+                if candidate["evaluation"]["type"] == "cp":
+                    cp_val = candidate["eval_score"]
+                    if cp_val > 0:
+                        eval_text = f"+{cp_val/100:.2f}"
+                    else:
+                        eval_text = f"{cp_val/100:.2f}"
+                elif candidate["evaluation"]["type"] == "mate":
+                    mate_val = candidate["eval_score"]
+                    eval_text = f"#{mate_val}" if mate_val != 0 else "0.00"
+                else:
+                    eval_text = "0.00"
+
+                # Add ranking indicator
+                rank_indicator = (
+                    "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}."
+                )
+                response_lines.append(
+                    f"{rank_indicator} **{candidate['move']}** ({eval_text})"
+                )
+
+            response_lines.append("")
+            response_lines.append(
+                "💡 *Use this tool frequently when comparing moves - it's very fast thanks to the persistent Stockfish instance!*"
+            )
+
+            return [TextContent(type="text", text="\n".join(response_lines))]
+
+        except Exception as e:
+            log_tool_error(e, "evaluate_candidate_moves")
+            return [
+                TextContent(
+                    type="text", text=f"❌ Error evaluating candidate moves: {str(e)}"
+                )
+            ]

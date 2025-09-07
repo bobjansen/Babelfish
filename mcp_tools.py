@@ -328,4 +328,32 @@ MCP_TOOLS = [
             "required": ["starting_fen", "moves"],
         },
     ),
+    Tool(
+        name="evaluate_candidate_moves",
+        description="RAPID EVALUATION TOOL: Quickly evaluate multiple candidate moves from a chess position. Perfect for comparing move options without hesitation - use this tool frequently and liberally when analyzing positions. The persistent Stockfish instance makes this very fast. Ideal for: 1) Comparing multiple candidate moves 2) Validating move suggestions 3) Quick tactical checks 4) Exploring alternative lines. ALWAYS use this when you have multiple moves to consider - there's no performance penalty thanks to caching!",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "fen": {
+                    "type": "string",
+                    "description": "The chess position in FEN notation to analyze from",
+                },
+                "candidate_moves": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of candidate moves in standard algebraic notation (e.g., ['Nf3', 'e4', 'c4', 'd4']). Include as many candidates as you want to evaluate - the tool is very fast.",
+                    "minItems": 2,
+                    "maxItems": 20,
+                },
+                "depth": {
+                    "type": "integer",
+                    "description": "Analysis depth for evaluation (default: 15)",
+                    "default": 15,
+                    "minimum": 10,
+                    "maximum": 25,
+                },
+            },
+            "required": ["fen", "candidate_moves"],
+        },
+    ),
 ]
