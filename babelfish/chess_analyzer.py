@@ -273,6 +273,7 @@ class ChessAnalyzer:
         depth: int = 20,
         max_moves: int = 20,
         time_limit: Optional[float] = None,
+        centipawn_limit: int = 2000,
     ) -> Dict:
         """Get the engine's principal variation (main line) from a position.
 
@@ -361,7 +362,10 @@ class ChessAnalyzer:
                 # Stop if evaluation becomes too extreme (likely found a winning/losing line)
                 if evaluation["type"] == "mate":
                     break
-                elif evaluation["type"] == "cp" and abs(evaluation["value"]) > 2000:
+                elif (
+                    evaluation["type"] == "cp"
+                    and abs(evaluation["value"]) > centipawn_limit
+                ):
                     # Very large advantage, probably found the key line
                     break
 

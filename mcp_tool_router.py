@@ -1192,9 +1192,9 @@ class MCPToolRouter:
                     board.push(move_obj)
                     new_fen = board.fen()
 
-                    # Get PV from the resulting position
+                    # Get PV from the resulting position with higher centipawn limit for display
                     pv_result = self.chess_analyzer.get_principal_variation(
-                        new_fen, depth, moves_per_line - 1
+                        new_fen, depth, moves_per_line - 1, centipawn_limit=10000
                     )
                     continuation = " ".join(pv_result["pv_moves"][: moves_per_line - 1])
                     full_line = f"{move} {continuation}".strip()
